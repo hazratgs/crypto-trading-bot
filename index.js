@@ -4,6 +4,14 @@ const config = require('./config')
 // Инициализация соединения
 const btce = new BTCE(config.key, config.secret)
 
+// Вся история движения
+const history = []
+
+// Свечи
+const candles = []
+
+let segment = null
+
 // Получаем данные кошельков
 btce.getInfo((err, res) => {
   if (err) throw new Error(err)
@@ -15,65 +23,58 @@ btce.getInfo((err, res) => {
     if (err) throw new Error(err)
     const ticker = res.ticker
 
-    btce.trades({count: 350, pair: 'btc_usd'}, (err, res) => {
-      if (err) throw new Error(err)
-
-      // Свечи
-      const candles = {}
-      let candle = 0
-      let segment = null
-
-      for (let item of res) {
-        if (item.trade_type !== 'bid') continue
-        segment = !segment ? item.date : segment
-        if ((segment - item.date) > 60) {
-          segment = item.date
-          candle++
-        }
-
-        // Добавляем свечу
-        if (!candles.hasOwnProperty(candle)){
-          candles[candle] = {
-            type: null,
-            priceMin: null,
-            priceMax: null,
-            priceAvg: null,
-            amount: null,
-            items: []
-          }
-        }
-
-        candles[candle].items.push(item)
-      }
-
-      // Определяем цвет свечей
-      for (let item in candles) {
-
-        let priceMin = null
-        let priceMax = null
-        for (element of candles[item].items) {
-          priceMin = !priceMin ? element.price : (element.price < priceMin ? element.price : priceMin)
-          priceMax = !priceMax ? element.price : (element.price > priceMax ? element.price : priceMax)
-        }
-        candles[item].priceMin = priceMin
-        candles[item].priceMax = priceMax
-        candles[item].priceAvg = ((priceMax - priceMin) / 2) + priceMin
-      }
-
-      let first = null
-      for (let item in candles){
-        if (!first) {
-          console.log('Последняя цена ' + candles[item].priceMin)
-          first = candles[item].priceMin
-          continue
-        }
-
-        if (first < candles[item].priceMin) {
-          console.log('Выгодно купить ' + candles[item].priceMin)
-        } else {
-          console.log('Не выгодно ' + candles[item].priceMin)
-        }
-      }
-    })
+    setInterval(() => trades(), 100)
   })
 })
+
+const trades = () => {
+  btce.trades({count: 150, pair: 'btc_usd'}, (err, res) => {
+    if (err) throw new Error(err)
+    for (let item of res.reverse()) {
+      // Пропускаем повторы
+      if (findHistory(item.tid)) continue
+
+      // Добавляем элемент в историю
+      history.unshift(item)
+
+      let date = new Date(item.date * 1000)
+      if (segment === null || segment !== date.getMinutes()) {
+        segment = date.getMinutes()
+
+        // Добавление новой минутной свечи
+        candles.unshift({
+          date: date,
+          timestamp: item.date,
+          type: null,
+          price: {},
+          amount: 0,
+          items: []
+        })
+      }
+
+      // Вставляем событие в текущую свечи
+      candles[0].items.unshift(item)
+
+      // Расчет мин и макс
+      candles[0].price.min = !candles[0].price.min
+        ? item.price
+        : (item.price < candles[0].price.min ? item.price : candles[0].price.min)
+
+      candles[0].price.max = !candles[0].price.max
+        ? item.price
+        : (item.price > candles[0].price.max ? item.price : candles[0].price.max)
+
+      // Объем
+      candles[0].amount += item.amount
+    }
+  })
+}
+
+const findHistory = (tid) => {
+  for (item of history) {
+    if (tid === item.tid) return true
+  }
+  return false
+}
+
+setTimeout(() => console.log(candles), 5000)
