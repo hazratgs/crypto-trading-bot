@@ -23,7 +23,7 @@ btce.getInfo((err, res) => {
     if (err) throw new Error(err)
     const ticker = res.ticker
 
-    setInterval(() => trades(), 100)
+    setInterval(() => trades(), 1000)
   })
 })
 
@@ -47,6 +47,7 @@ const trades = () => {
           date: date,
           timestamp: item.date,
           type: null,
+          difference: 0,
           price: {},
           amount: 0,
           items: []
@@ -79,18 +80,41 @@ const findHistory = (tid) => {
 }
 
 // Наблюдение за последними свечами, для выявления покупки или продажи
-const observe = () => {
+const observe = (type) => {
   if (!candles.length) return false
 
-  // Количество наблюдаемых свеч
-  const count = 15
+  // Получаем последние 15 свечей
+  let data = candles.filter((item, index) => index <= 15)
 
-  let i = 0
-  for (item of candles) {
-    if (i >= count) break
-    console.log(item.price.min)
-    i++
+  // Необходимо проанализировать данные и решить купить или продать
+  if (type === 'buy') {
+
+    // Определяем цвет свечи
+    let last = null
+    let dataColor = data.reverse().map(item => {
+      if (last === null) {
+        last = item
+        return item
+      }
+
+      // Определяем цвет свечи
+      item.type = item.price.min > last.price.min
+
+      // Разница в цене
+      item.difference = item.price.min - last.price.min
+
+      // Текущий элемент для сравнения со следующим
+      last = item
+
+      return item
+    })
+
+    data = dataColor.reverse()
+    console.log(data)
+
+  } else if (type === 'sell') {
+
   }
 }
 
-setInterval(() => observe(), 1000)
+setInterval(() => observe('buy'), 60000)
