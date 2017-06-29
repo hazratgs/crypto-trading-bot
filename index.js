@@ -27,6 +27,7 @@ btce.getInfo((err, res) => {
   })
 })
 
+// Формирование структурированных данных купли/продажи
 const trades = () => {
   btce.trades({count: 150, pair: 'btc_usd'}, (err, res) => {
     if (err) throw new Error(err)
@@ -77,4 +78,19 @@ const findHistory = (tid) => {
   return false
 }
 
-setTimeout(() => console.log(candles), 5000)
+// Наблюдение за последними свечами, для выявления покупки или продажи
+const observe = () => {
+  if (!candles.length) return false
+
+  // Количество наблюдаемых свеч
+  const count = 15
+
+  let i = 0
+  for (item of candles) {
+    if (i >= count) break
+    console.log(item.price.min)
+    i++
+  }
+}
+
+setInterval(() => observe(), 1000)
