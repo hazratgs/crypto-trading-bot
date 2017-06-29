@@ -110,11 +110,37 @@ const observe = (type) => {
     })
 
     data = dataColor.reverse()
-    console.log(data)
+
+    // Ожидаем, что курс дошел до дна и начинает подниматься
+    if (data[0].type === true) {
+
+      // С вторая по четвертой свечи обязательно должна быть в минусе
+      if (data[1].type === false && data[2].type === false && data[3].type === false && data[4].type === false) {
+        candlesLog(data, 'Скупаем!')
+      } else {
+        candlesLog(data, 'С 2 по 4 не все в минусе, не лучший вариант покупки')
+      }
+    } else {
+      candlesLog(data, 'Дно пока еще не пробито...')
+    }
 
   } else if (type === 'sell') {
 
   }
+}
+
+const candlesLog = (data, text) => {
+  console.log('+-------------------------------------------+')
+  console.log(text)
+  data.map(item => {
+    console.log(`
+      ${item.date.getDay()} ${item.date.getMonth()} ${item.date.getHours()}:${item.date.getMinutes()} 
+      - цвет: ${item.type} 
+      - цена: от $${item.price.min} до $${item.price.max}
+      - объем: ${item.amount}
+      - количество сделок: ${item.items.length}`)
+  })
+  console.log('+-------------------------------------------+')
 }
 
 setInterval(() => observe('buy'), 60000)
