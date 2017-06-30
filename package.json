@@ -12,5 +12,8 @@
   "license": "ISC",
   "devDependencies": {
     "btce": "^0.4.4"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.27.1"
   }
 }
