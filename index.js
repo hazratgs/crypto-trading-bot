@@ -1,8 +1,12 @@
-const BTCE = require('btce')
 const config = require('./config')
+const BTCE = require('btce')
+const TelegramBot = require('node-telegram-bot-api')
 
 // Инициализация соединения
 const btce = new BTCE(config.key, config.secret)
+
+// Инициализация бота
+const bot = new TelegramBot(config.token, {polling: true})
 
 // Вся история движения
 const history = []
@@ -22,7 +26,7 @@ btce.getInfo((err, res) => {
   // Кошелек
   const wallet = res.return.funds
 
-  btce.ticker({pair: 'btc_usd'}, (err, res) => {
+  btce.ticker({pair: 'eth_btc'}, (err, res) => {
     if (err) throw new Error(err)
     const ticker = res.ticker
 
@@ -32,7 +36,7 @@ btce.getInfo((err, res) => {
 
 // Формирование структурированных данных купли/продажи
 const trades = () => {
-  btce.trades({count: elements, pair: 'btc_usd'}, (err, res) => {
+  btce.trades({count: elements, pair: 'eth_btc'}, (err, res) => {
     if (err) throw new Error(err)
     console.log(res.length)
     for (let item of res.reverse()) {
@@ -90,8 +94,8 @@ const findHistory = (tid) => {
 const observe = (type) => {
   if (!candles.length) return false
 
-  // Получаем последние 15 свечей
-  let data = candles.filter((item, index) => index <= 15)
+  // Получаем последние свечи
+  let data = candles.filter((item, index) => index <= 30)
 
   // Необходимо проанализировать данные и решить купить или продать
   if (type === 'buy') {
@@ -110,22 +114,25 @@ const observe = (type) => {
     })
 
     if (state) {
+      bot.sendMessage(config.user, `⌛ Запрос на покупку 0.005 BTC по курсу ${current.price.min}`)
 
-      console.log('Пора скупать')
       // Покупаем
-      // btce.trade({
-      //   pair: 'btc_usd',
-      //   type: 'buy',
-      //   rate: current.price.min,
-      //   amount: 0.00099542
-      // }, (err, res) => {
-      //   if (!err) {
-      //     console.log(err)
-      //     throw new Error(err)
-      //   }
-      //
-      //   console.log(res)
-      // })
+      btce.trade({
+        pair: 'btc_usd',
+        type: 'buy',
+        rate: 5000,
+        amount: 0.00099542
+      }, (err, res) => {
+        if (!err) {
+          console.log(err)
+          throw new Error(err)
+        }
+
+        // Оповещаем об покупке
+        bot.sendMessage(config.user, `💰 Купили 0.005 BTC по курсу ${current.price.min}`)
+
+        console.log(res)
+      })
 
     } else {
 
