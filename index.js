@@ -1,12 +1,19 @@
 const config = require('./config')
+const db = require('./db')
 const BTCE = require('btce')
 const TelegramBot = require('node-telegram-bot-api')
+
+// MongoDB модели
+const models = require('./model')
 
 // Инициализация соединения
 const btce = new BTCE(config.key, config.secret)
 
 // Инициализация бота
 const bot = new TelegramBot(config.token, {polling: true})
+
+// Валюта
+const pair = 'btc_usd'
 
 // Вся история движения
 const history = []
@@ -16,6 +23,9 @@ const candles = []
 
 let segment = null
 
+// Кошельки
+let wallet = null
+
 // Количество начально загружаемых транзакций
 let elements = 300
 
@@ -24,9 +34,9 @@ btce.getInfo((err, res) => {
   if (err) throw new Error(err)
 
   // Кошелек
-  const wallet = res.return.funds
+  wallet = res.return.funds
 
-  btce.ticker({pair: 'eth_btc'}, (err, res) => {
+  btce.ticker({pair: pair}, (err, res) => {
     if (err) throw new Error(err)
     const ticker = res.ticker
 
@@ -36,9 +46,8 @@ btce.getInfo((err, res) => {
 
 // Формирование структурированных данных купли/продажи
 const trades = () => {
-  btce.trades({count: elements, pair: 'eth_btc'}, (err, res) => {
+  btce.trades({count: elements, pair: pair}, (err, res) => {
     if (err) throw new Error(err)
-    console.log(res.length)
     for (let item of res.reverse()) {
       // Пропускаем повторы
       if (findHistory(item.tid)) continue
@@ -90,12 +99,30 @@ const findHistory = (tid) => {
   return false
 }
 
+// Активные ордеры
+const activeOrders = () => new Promise((resolve, reject) => {
+  btce.activeOrders({pair: pair}, (err, res) => {
+    resolve(res)
+  })
+})
+
 // Наблюдение за последними свечами, для выявления покупки или продажи
-const observe = (type) => {
+const observe = async () => {
   if (!candles.length) return false
 
+  // Получение списка активных ордеров
+  let orders = await activeOrders()
+
+  console.log(orders)
+  // Не пропускаем дальше, если есть активный ордер
+  if (!orders.hasOwnProperty('error') && orders.error !== 'no orders') {
+    return false
+  }
+  console.log('идем дальше')
   // Получаем последние свечи
   let data = candles.filter((item, index) => index <= 30)
+
+  let type = 'buy'
 
   // Необходимо проанализировать данные и решить купить или продать
   if (type === 'buy') {
@@ -128,6 +155,13 @@ const observe = (type) => {
           throw new Error(err)
         }
 
+        new models.Order({
+          type: 'buy',
+          pair: pair,
+          rate: 5000,
+          amount: 0.00099542
+        }).save();
+
         // Оповещаем об покупке
         bot.sendMessage(config.user, `💰 Купили 0.005 BTC по курсу ${current.price.min}`)
 
@@ -143,4 +177,4 @@ const observe = (type) => {
 }
 
 // Отслеживать каждую минуту ситуацию на рынке
-setInterval(() => observe('buy'), 60000)
+setInterval(() => observe(), 60000)

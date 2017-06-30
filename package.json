@@ -14,6 +14,7 @@
     "btce": "^0.4.4"
   },
   "dependencies": {
+    "mongoose": "^4.11.0",
     "node-telegram-bot-api": "^0.27.1"
   }
 }
