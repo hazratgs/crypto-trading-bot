@@ -12,6 +12,9 @@ const candles = []
 
 let segment = null
 
+// Количество начально загружаемых транзакций
+let elements = 300
+
 // Получаем данные кошельков
 btce.getInfo((err, res) => {
   if (err) throw new Error(err)
@@ -29,8 +32,9 @@ btce.getInfo((err, res) => {
 
 // Формирование структурированных данных купли/продажи
 const trades = () => {
-  btce.trades({count: 150, pair: 'btc_usd'}, (err, res) => {
+  btce.trades({count: elements, pair: 'btc_usd'}, (err, res) => {
     if (err) throw new Error(err)
+    console.log(res.length)
     for (let item of res.reverse()) {
       // Пропускаем повторы
       if (findHistory(item.tid)) continue
@@ -69,6 +73,9 @@ const trades = () => {
       // Объем
       candles[0].amount += item.amount
     }
+
+    // Уменьшаем до 75 кол. новых данных
+    elements = 75
   })
 }
 
@@ -89,58 +96,44 @@ const observe = (type) => {
   // Необходимо проанализировать данные и решить купить или продать
   if (type === 'buy') {
 
-    // Определяем цвет свечи
-    let last = null
-    let dataColor = data.reverse().map(item => {
-      if (last === null) {
-        last = item
-        return item
+    // Текущая обстановка на рынке
+    let current = data.shift()
+
+    // Состояние
+    let state = false
+
+    // Поиск выгодного момента
+    data.map(item => {
+      if (current.price.min < item.price.min) {
+        state = true
       }
-
-      // Определяем цвет свечи
-      item.type = item.price.min > last.price.min
-
-      // Разница в цене
-      item.difference = item.price.min - last.price.min
-
-      // Текущий элемент для сравнения со следующим
-      last = item
-
-      return item
     })
 
-    data = dataColor.reverse()
+    if (state) {
 
-    // Ожидаем, что курс дошел до дна и начинает подниматься
-    if (data[0].type === true) {
+      console.log('Пора скупать')
+      // Покупаем
+      // btce.trade({
+      //   pair: 'btc_usd',
+      //   type: 'buy',
+      //   rate: current.price.min,
+      //   amount: 0.00099542
+      // }, (err, res) => {
+      //   if (!err) {
+      //     console.log(err)
+      //     throw new Error(err)
+      //   }
+      //
+      //   console.log(res)
+      // })
 
-      // С вторая по четвертой свечи обязательно должна быть в минусе
-      if (data[1].type === false && data[2].type === false && data[3].type === false && data[4].type === false) {
-        candlesLog(data, 'Скупаем!')
-      } else {
-        candlesLog(data, 'С 2 по 4 не все в минусе, не лучший вариант покупки')
-      }
     } else {
-      candlesLog(data, 'Дно пока еще не пробито...')
-    }
 
+    }
   } else if (type === 'sell') {
 
   }
 }
 
-const candlesLog = (data, text) => {
-  console.log('+-------------------------------------------+')
-  console.log(text)
-  data.map(item => {
-    console.log(`
-      ${item.date.getDay()} ${item.date.getMonth()} ${item.date.getHours()}:${item.date.getMinutes()} 
-      - цвет: ${item.type} 
-      - цена: от $${item.price.min} до $${item.price.max}
-      - объем: ${item.amount}
-      - количество сделок: ${item.items.length}`)
-  })
-  console.log('+-------------------------------------------+')
-}
-
+// Отслеживать каждую минуту ситуацию на рынке
 setInterval(() => observe('buy'), 60000)
