@@ -26,8 +26,11 @@ let segment = null
 // Кошельки
 let wallet = null
 
+// Объем преобритаемых btc
+const amount = 0.001
+
 // Количество начально загружаемых транзакций
-let elements = 300
+let elements = 500
 
 // Получаем данные кошельков
 btce.getInfo((err, res) => {
@@ -88,7 +91,7 @@ const trades = () => {
     }
 
     // Уменьшаем до 75 кол. новых данных
-    elements = 75
+    elements = 100
   })
 }
 
@@ -106,75 +109,129 @@ const activeOrders = () => new Promise((resolve, reject) => {
   })
 })
 
-// Наблюдение за последними свечами, для выявления покупки или продажи
-const observe = async () => {
-  if (!candles.length) return false
-
-  // Получение списка активных ордеров
-  let orders = await activeOrders()
-
-  console.log(orders)
-  // Не пропускаем дальше, если есть активный ордер
-  if (!orders.hasOwnProperty('error') && orders.error !== 'no orders') {
+// Получаем данные о ордере
+const getActiveOrders = () => new Promise(async (resolve, reject) => {
+  let order = await models.Order.findOne({status: false})
+  if (order === null) {
+    reject('Нет активных ордеров')
     return false
   }
-  console.log('идем дальше')
-  // Получаем последние свечи
-  let data = candles.filter((item, index) => index <= 30)
 
-  let type = 'buy'
+  btce.orderInfo({order_id: order.id}, (err, res) => {
+    if (err) {
+      reject(err)
+      return false
+    }
+    resolve(res)
+  })
+})
 
-  // Необходимо проанализировать данные и решить купить или продать
-  if (type === 'buy') {
+// Наблюдение за ордерами и изменение типа покупки (buy/sell)
+const observeActiveOrders = async () => {
+  try {
+    let order = await getActiveOrders()
 
-    // Текущая обстановка на рынке
-    let current = data.shift()
+    // Ордер завершен
+    if (order.return.status === 1){
 
-    // Состояние
-    let state = false
-
-    // Поиск выгодного момента
-    data.map(item => {
-      if (current.price.min < item.price.min) {
-        state = true
-      }
-    })
-
-    if (state) {
-      bot.sendMessage(config.user, `⌛ Запрос на покупку 0.005 BTC по курсу ${current.price.min}`)
-
-      // Покупаем
-      btce.trade({
-        pair: 'btc_usd',
-        type: 'buy',
-        rate: 5000,
-        amount: 0.00099542
-      }, (err, res) => {
-        if (!err) {
-          console.log(err)
-          throw new Error(err)
-        }
-
-        new models.Order({
-          type: 'buy',
-          pair: pair,
-          rate: 5000,
-          amount: 0.00099542
-        }).save();
-
-        // Оповещаем об покупке
-        bot.sendMessage(config.user, `💰 Купили 0.005 BTC по курсу ${current.price.min}`)
-
-        console.log(res)
+      // Ордер выполнен, помечаем как выполненный
+      models.Order.update({
+        id: order.id
+      }, {
+        $set: true
       })
 
-    } else {
+      // Сообщаем боту, что пора выставлять на продажу
 
     }
-  } else if (type === 'sell') {
+  } catch (e) {
+    console.log(e)
+  }
+}
 
+// Наблюдение за последними свечами, для выявления покупки или продажи
+const observe = async () => {
+  try {
+    if (!candles.length) return false
+
+    // Получение списка активных ордеров
+    try {
+      let order = await getActiveOrders()
+      console.log('есть активное задание')
+      console.log(order)
+
+      // Есть активный ордер, ожидаем завершения
+      return false
+    } catch (e) {
+      // Не обрабатываем исключение,
+      // так как нас устраивает отсутствие ордера
+    }
+
+    console.log('дальше пошел.....')
+
+    // Получаем последние свечи
+    let data = candles.filter((item, index) => index <= 30)
+
+    let type = 'buy'
+
+    // Необходимо проанализировать данные и решить купить или продать
+    if (type === 'buy') {
+
+      // Текущая обстановка на рынке
+      let current = data.shift()
+
+      // Состояние
+      let state = false
+
+      // Поиск выгодного момента
+      data.map(item => {
+        if (current.price.min < item.price.min) {
+          state = true
+        }
+      })
+
+      if (state) {
+
+        // Покупаем
+        btce.trade({
+          pair: 'btc_usd',
+          type: 'sell',
+          rate: 2700,
+          amount: amount
+        }, (err, res) => {
+          if (err) {
+            console.log(err)
+            bot.sendMessage(config.user, `Ошибка trade: ${err}`)
+            return false
+          }
+
+          new models.Order({
+            id: res.return.order_id,
+            type: 'sell',
+            pair: pair,
+            rate: 2700,
+            amount: amount
+          }).save()
+
+          // Оповещаем об покупке
+          bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} BTC по курсу ${current.price.min}`)
+
+          // bot.sendMessage(config.user, `💰 Купили ${amount} BTC по курсу ${current.price.min}`)
+        })
+
+      } else {
+        console.log('Не выгодно')
+      }
+    } else if (type === 'sell') {
+
+    }
+  } catch (e) {
+    console.log('trade observe ' + e)
   }
 }
 
 // Отслеживать каждую минуту ситуацию на рынке
-setInterval(() => observe(), 60000)
+setInterval(() => observe(), 10000)
+
+// Отслеживание завершения сделок
+setInterval(() => observeActiveOrders(), 1000)
