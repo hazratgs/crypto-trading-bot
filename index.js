@@ -1,5 +1,4 @@
 const config = require('./config')
-const db = require('./db')
 const BtceService = require('btc-e-v3')
 const TelegramBot = require('node-telegram-bot-api')
 
@@ -12,6 +11,9 @@ const bot = new TelegramBot(config.token, {polling: true})
 // Валюта
 const pair = 'btc_usd'
 
+// Наценка в %
+const markup = 1
+
 // Вся история движения
 const history = []
 
@@ -23,12 +25,38 @@ let segment = null
 // Объем преобритаемых btc
 const amount = 0.001
 
+// Список ордеров на наблюдении
+const orders = []
+
 // Поиск в истории транзакций
 const findHistory = (tid) => {
   for (item of history) {
     if (tid === item.tid) return true
   }
   return false
+}
+
+// Последняя транзакция
+const lastTransaction = async () => {
+  try {
+    // Последняя транзакция
+    let trandeHistory = await btce.tradeHistory({ from: 0, count: 1 })
+    let last = null
+    for (let item in trandeHistory){
+      if (!last) {
+        last = trandeHistory[item]
+        last.id = item
+      }
+    }
+    return last
+  } catch (e) {
+    console.log(`Error lastTrade: ${e}`)
+  }
+}
+
+// Наблюдение за ордерами
+const observeOrders = () => {
+
 }
 
 // Формирование структурированных данных купли/продажи
@@ -80,29 +108,12 @@ const trades = async () => {
   }
 }
 
-const lastTransaction = async () => {
-  try {
-    // Последняя транзакция
-    let trandeHistory = await btce.tradeHistory({ from: 0, count: 1 })
-    let last = null
-    for (let item in trandeHistory){
-      if (!last) {
-        last = trandeHistory[item]
-        last.id = item
-      }
-    }
-    return last
-  } catch (e) {
-    console.log(`Error lastTrade: ${e}`)
-  }
-}
+
 
 // Наблюдение за последними свечами, для выявления покупки или продажи
 const observe = async () => {
   try {
-    console.log(candles.length)
-
-    if (!candles.length || candles.length < 5) {
+    if (!candles.length || candles.length < 10) {
       return false
     }
 
@@ -118,7 +129,7 @@ const observe = async () => {
     }
 
     // Получаем последние свечи
-    let data = candles.filter((item, index) => index <= 30)
+    let data = candles.filter((item, index) => index <= 60)
 
     // Последняя транзакция
     let lastTrade = await lastTransaction()
@@ -132,39 +143,34 @@ const observe = async () => {
       // Текущая обстановка на рынке
       let current = data.shift()
 
-      // Состояние
-      let state = false
-
       // Поиск выгодного момента
-      data.map(item => {
-        if (current.price.min < item.price.min) {
-          state = true
+      for (let item of data){
+        if (current.price.min > item.price.min) {
+          // Не самая выгодная цена, сделка сорвана
+          return false
         }
-      })
+      }
 
-      if (state) {
+      // А так же проверяем, реально ли продать с 2% накидкой
+      let markupPrice = (current.price.min * (markup / 100)) + current.price.min
 
-        // Покупаем
-        try {
-          let buy = await btce.trade({
-            pair: pair,
-            type: type,
-            rate: 2700,
-            amount: amount
-          })
+      // Покупаем
+      try {
+        let buy = await btce.trade({
+          pair: pair,
+          type: type,
+          rate: current.price.min,
+          amount: amount
+        })
 
-          // console.log(buy.order_id)
+        // console.log(buy.order_id)
 
-          // Оповещаем об покупке
-          bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} BTC по курсу ${current.price.min}`)
+        // Оповещаем об покупке
+        bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} BTC по курсу ${current.price.min}`)
 
-        } catch (e) {
-          console.log(`Buy error: ${e}`)
-          bot.sendMessage(config.user, `Ошибка buy: ${e}`)
-        }
-
-      } else {
-        console.log('Не выгодно')
+      } catch (e) {
+        console.log(`Buy error: ${e}`)
+        bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     } else if (type === 'sell') {
 
@@ -179,4 +185,4 @@ const observe = async () => {
 setInterval(trades, 1000)
 
 // Отслеживать каждую минуту ситуацию на рынке
-setInterval(observe, 6000)
+setInterval(observe, 60000)
