@@ -8,22 +8,11 @@ const btce = new BtceService({ publicKey: config.key, secretKey: config.secret }
 // Инициализация бота
 const bot = new TelegramBot(config.token, {polling: true})
 
-// Валюта
-const pair = 'btc_usd'
-
-// Наценка в %
-const markup = 1
-
 // Вся история движения
 const history = []
 
 // Свечи
 const candles = []
-
-let segment = null
-
-// Объем преобритаемых btc
-const amount = 0.001
 
 // Список ордеров на наблюдении
 const orders = []
@@ -56,14 +45,30 @@ const lastTransaction = async () => {
 
 // Наблюдение за ордерами
 const observeOrders = () => {
+  orders.map(async id => {
+    try {
+      let res = await btce.orderInfo(id)
+      let info = res.return[id]
 
+      // Оповещаем только о завершенных ордерах
+      if (info.status === 1) return false
+
+      // Оповещаем пользователя о выполнении ордера
+      bot.sendMessage(config.user, `💰 ${info.type === 'buy' ? 'Купили' : 'Продали'} (${id}) ${info.amount} BTC по курсу ${info.rate}`)
+
+      // Удаляем id из orders
+      orders.splice(orders.indexOf(id), 1)
+    } catch (e) {
+      console.log(`Error observeOrders: ${e}`)
+    }
+  })
 }
 
 // Формирование структурированных данных купли/продажи
 const trades = async () => {
   try {
-    let trades = await btce.trades(pair)
-    for (let item of trades[pair].reverse()){
+    let trades = await btce.trades(config.pair)
+    for (let item of trades[config.pair].reverse()){
 
       // Пропускаем повторы
       if (findHistory(item.tid)) continue
@@ -72,9 +77,7 @@ const trades = async () => {
       history.unshift(item)
 
       let date = new Date(item.timestamp * 1000)
-      if (segment === null || segment !== date.getMinutes()) {
-        segment = date.getMinutes()
-
+      if (candles.length === 0 || candles[0].date.getMinutes() !== date.getMinutes()) {
         // Добавление новой минутной свечи
         candles.unshift({
           date: date,
@@ -102,7 +105,6 @@ const trades = async () => {
       // Объем
       candles[0].amount += item.amount
     }
-
   } catch (e) {
     console.log(`Error trades: ${e}`)
   }
@@ -119,7 +121,7 @@ const observe = async () => {
 
     try {
       // Получение списка активных ордеров
-      await btce.activeOrders(pair)
+      await btce.activeOrders(config.pair)
 
       // Есть активный ордер, ожидаем завершения
       return false
@@ -152,26 +154,58 @@ const observe = async () => {
       }
 
       // А так же проверяем, реально ли продать с 2% накидкой
-      let markupPrice = (current.price.min * (markup / 100)) + current.price.min
+      let markupPrice = (current.price.min * (config.markup / 100)) + current.price.min
+      let markupPriceMin = null
+      let markupPriceMax = null
 
-      // Покупаем
-      try {
-        let buy = await btce.trade({
-          pair: pair,
-          type: type,
-          rate: current.price.min,
-          amount: amount
-        })
+      let resolution = false
 
-        // console.log(buy.order_id)
+      // Получаем необходимое количество свечей
+      let markupData = candles.filter((item, index) => index <= 360)
+      for (let item of markupData) {
 
-        // Оповещаем об покупке
-        bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} BTC по курсу ${current.price.min}`)
+        // Если цена валюты достигала за последние n минут markupPrice
+        // то разрешаем покупать валюту
+        if (markupPrice <= item.price.max) {
+          resolution = true
+        }
 
-      } catch (e) {
-        console.log(`Buy error: ${e}`)
-        bot.sendMessage(config.user, `Ошибка buy: ${e}`)
+        markupPriceMin = markupPriceMin === null
+          ? item.price.min
+          : (markupPriceMin < item.price.min ? markupPriceMin : item.price.min)
+
+        markupPriceMax = markupPriceMax === null
+          ? item.price.max
+          : (markupPriceMax > item.price.max ? markupPriceMax : item.price.max)
       }
+
+      if (resolution) {
+        // Покупаем
+        try {
+          let buy = await btce.trade({
+            pair: config.pair,
+            type: type,
+            rate: current.price.min,
+            amount: config.amount
+          })
+
+          // Наблюдаем за ордером
+          orders.push(buy.order_id)
+
+          // Оповещаем об покупке
+          bot.sendMessage(config.user, `
+            ⌛ Запрос на покупку ${config.amount} BTC по курсу ${current.price.min}
+            мин. цена: ${markupPriceMin}
+            макс. цена: ${markupPriceMax}
+            цена продажи: ${markupPrice}
+          `)
+
+        } catch (e) {
+          console.log(`Buy error: ${e}`)
+          bot.sendMessage(config.user, `Ошибка buy: ${e}`)
+        }
+      }
+
     } else if (type === 'sell') {
 
     }
@@ -181,8 +215,11 @@ const observe = async () => {
   }
 }
 
-// Формирование структурированных данных купли/продажи
+// Формирование структурированных данных транзакций
 setInterval(trades, 1000)
+
+// Наблюдение за ордерами
+setInterval(observeOrders, 4000)
 
 // Отслеживать каждую минуту ситуацию на рынке
 setInterval(observe, 60000)
