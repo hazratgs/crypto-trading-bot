@@ -54,7 +54,9 @@ const observeOrders = () => {
       if (info.status === 1) return false
 
       // Оповещаем пользователя о выполнении ордера
-      bot.sendMessage(config.user, `💰 ${info.type === 'buy' ? 'Купили' : 'Продали'} (${id}) ${info.amount} BTC по курсу ${info.rate}`)
+      bot.sendMessage(config.user, `
+        💰 ${info.type === 'buy' ? 'Купили' : 'Продали'} (${id}) ${info.amount} BTC по курсу ${info.rate}
+      `)
 
       // Удаляем id из orders
       orders.splice(orders.indexOf(id), 1)
@@ -67,7 +69,7 @@ const observeOrders = () => {
 // Формирование структурированных данных купли/продажи
 const trades = async () => {
   try {
-    let trades = await btce.trades(config.pair)
+    let trades = await btce.trades(config.pair, (!history.length ? 1000 : 150))
     for (let item of trades[config.pair].reverse()){
 
       // Пропускаем повторы
@@ -109,8 +111,6 @@ const trades = async () => {
     console.log(`Error trades: ${e}`)
   }
 }
-
-
 
 // Наблюдение за последними свечами, для выявления покупки или продажи
 const observe = async () => {
@@ -161,7 +161,7 @@ const observe = async () => {
       let resolution = false
 
       // Получаем необходимое количество свечей
-      let markupData = candles.filter((item, index) => index <= 360)
+      let markupData = candles.filter((item, index) => index <= 720)
       for (let item of markupData) {
 
         // Если цена валюты достигала за последние n минут markupPrice
@@ -194,7 +194,7 @@ const observe = async () => {
 
           // Оповещаем об покупке
           bot.sendMessage(config.user, `
-            ⌛ Запрос на покупку ${config.amount} BTC по курсу ${current.price.min}
+            ⌛ Запрос на покупку (${buy.order_id}) ${config.amount} BTC по курсу ${current.price.min}
             мин. цена: ${markupPriceMin}
             макс. цена: ${markupPriceMax}
             цена продажи: ${markupPrice}
@@ -219,7 +219,7 @@ const observe = async () => {
 setInterval(trades, 1000)
 
 // Наблюдение за ордерами
-setInterval(observeOrders, 4000)
+// setInterval(observeOrders, 4000)
 
 // Отслеживать каждую минуту ситуацию на рынке
-setInterval(observe, 60000)
+// setInterval(observe, 60000)
