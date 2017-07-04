@@ -48,48 +48,53 @@ const observeOrders = () => {
   orders.map(async order => {
     try {
       let res = await btce.orderInfo(order.id)
-      let info = res.return[order.id]
+      let info = res[order.id]
 
       // Оповещаем только о завершенных ордерах
-      if (info.status === 1) return false
+      if (info.status !== 1) return false
 
       if (info.type === 'buy') {
 
         // Оповещаем пользователя о купле
         bot.sendMessage(config.user, `
-          💰 Купили ${info.amount} BTC по курсу ${info.rate}
+          💰 Купили ${info.start_amount} BTC по курсу ${info.rate}
           order_id: ${order.id}
         `)
 
-        // Выставляем на продажу ...
-        let buy = await btce.trade({
-          pair: config.pair,
-          type: 'sell',
-          rate: order.sell,
-          amount: config.amount
-        })
+        try {
+          // Выставляем на продажу ...
+          let buy = await btce.trade({
+            pair: config.pair,
+            type: 'sell',
+            rate: order.sell,
+            amount: config.amount
+          })
 
-        // Наблюдаем за ордером
-        orders.push({
-          id: buy.order_id,
-          price: order.sell,
-          sell: order.sell,
-          markup: config.markup
-        })
+          // Наблюдаем за ордером
+          orders.push({
+            id: buy.order_id,
+            price: order.price, // сумма закупки
+            sell: order.sell,
+            markup: config.markup
+          })
 
-        // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `
-          💰 Выставили на продажу ${info.amount} BTC по курсу ${info.rate}
-          order_id: ${buy.order_id}
-        `)
+          // Оповещаем пользователя о выставлении на продажу
+          bot.sendMessage(config.user, `
+            💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}
+            order_id: ${buy.order_id}
+          `)
 
+        } catch (e) {
+          console.log(`Error observeOrders Buy: ${e}`)
+          bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
+        }
       } else {
 
         // Оповещаем о продаже
         bot.sendMessage(config.user, `
-          🎉 Продали ${info.amount} BTC по курсу ${info.rate}
+          🎉 Продали ${info.start_amount} BTC по курсу ${info.rate}
           Дополнительно:
-          Объем: ${info.amount}
+          Объем: ${info.start_amount}
           Купили: ${order.price}
           Продали: ${order.sell} (${info.rate} по данным btc-e с учетом коммисии)
           Наценка: ${order.markup}
@@ -198,10 +203,16 @@ const observe = async () => {
       }
     }
 
+    // Объем с коммисией
+    let amount = (config.amount * (config.commission / 100)) + config.amount
+
     // А так же проверяем, реально ли продать с 2% накидкой
-    let markupPrice = (current.price.min * (config.markup / 100)) + current.price.min
+    let markupPrice = (current.price.min * ((config.markup + (config.commission * 2)) / 100)) + current.price.min
     let markupPriceMin = null
     let markupPriceMax = null
+
+    // Округляем до сотых
+    markupPrice = markupPrice.toFixed(3)
 
     let resolution = false
 
@@ -231,7 +242,7 @@ const observe = async () => {
           pair: config.pair,
           type: 'buy',
           rate: current.price.min,
-          amount: config.amount
+          amount: amount // с учетом коммисии
         })
 
         // Наблюдаем за ордером
@@ -239,12 +250,17 @@ const observe = async () => {
           id: buy.order_id,
           price: current.price.min,
           sell: markupPrice,
-          markup: config.markup
+          markup: config.markup,
+          amount: amount
         })
 
         // Оповещаем об покупке
         bot.sendMessage(config.user, `
-            ⌛ Запрос на покупку (${buy.order_id}) ${config.amount} BTC по курсу ${current.price.min}
+            ⌛ Запрос на покупку (${buy.order_id}) ${amount} BTC по курсу ${current.price.min}
+            расход: $${amount * current.price.min}
+            коммисия: $${(amount * current.price.min) - (config.amount * current.price.min)}, ${amount - config.amount} BTC
+            получим с учетом коммисии: ${config.amount} BTC
+            примерно заработаем: $${markupPrice - current.price.min}
             мин. цена: ${markupPriceMin}
             макс. цена: ${markupPriceMax}
             цена продажи: ${markupPrice}
@@ -268,4 +284,4 @@ setInterval(trades, 1000)
 setInterval(observeOrders, 4000)
 
 // Отслеживать каждую минуту ситуацию на рынке
-setInterval(observe, 60000)
+// setInterval(observe, 60000)
