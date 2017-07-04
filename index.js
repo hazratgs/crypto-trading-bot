@@ -284,4 +284,4 @@ setInterval(trades, 1000)
 setInterval(observeOrders, 4000)
 
 // Отслеживать каждую минуту ситуацию на рынке
-// setInterval(observe, 60000)
+setInterval(observe, 60000)
