@@ -80,9 +80,7 @@ const observeOrders = () => {
 
           // Оповещаем пользователя о выставлении на продажу
           bot.sendMessage(config.user, `
-            💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}
-            order_id: ${buy.order_id}
-          `)
+            💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}, order_id: ${buy.order_id}`)
 
         } catch (e) {
           console.log(`Error observeOrders Buy: ${e}`)
@@ -257,21 +255,19 @@ const observe = async () => {
         // Оповещаем об покупке
         bot.sendMessage(config.user, `
             ⌛ Запрос на покупку (${buy.order_id}) ${amount} BTC по курсу ${current.price.min}
-            расход: $${amount * current.price.min}
-            коммисия: $${(amount * current.price.min) - (config.amount * current.price.min)}, ${amount - config.amount} BTC
-            получим с учетом коммисии: ${config.amount} BTC
-            примерно заработаем: $${markupPrice - current.price.min}
-            мин. цена: ${markupPriceMin}
-            макс. цена: ${markupPriceMax}
-            цена продажи: ${markupPrice}
-          `)
+расход: $${(amount * current.price.min).toFixed(3)}
+коммисия: $${(amount * current.price.min) - (config.amount * current.price.min)}, ${(amount - config.amount).toFixed(6)} BTC
+получим: ${config.amount} BTC
+заработаем: $${((config.amount * markupPrice) - (config.commission / 100)) - ((amount * current.price.min) - current.price.min)}
+мин. цена: ${markupPriceMin}
+макс. цена: ${markupPriceMax}
+цена продажи: ${markupPrice}`)
 
       } catch (e) {
         console.log(`Buy error: ${e}`)
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     }
-
   } catch (e) {
     console.log(`Error observe: ${e}`)
   }
