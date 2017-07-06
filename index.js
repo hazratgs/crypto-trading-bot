@@ -56,10 +56,7 @@ const observeOrders = () => {
       if (info.type === 'buy') {
 
         // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `
-          💰 Купили ${info.start_amount} BTC по курсу ${info.rate}
-          order_id: ${order.id}
-        `)
+        bot.sendMessage(config.user, `💰 Купили ${info.start_amount} BTC по курсу ${info.rate}, order_id: ${order.id}`)
 
         try {
           // Выставляем на продажу ...
@@ -79,8 +76,7 @@ const observeOrders = () => {
           })
 
           // Оповещаем пользователя о выставлении на продажу
-          bot.sendMessage(config.user, `
-            💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}, order_id: ${buy.order_id}`)
+          bot.sendMessage(config.user, `💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}, order_id: ${buy.order_id}`)
 
         } catch (e) {
           console.log(`Error observeOrders Buy: ${e}`)
@@ -90,16 +86,16 @@ const observeOrders = () => {
 
         // Оповещаем о продаже
         bot.sendMessage(config.user, `
-          🎉 Продали ${info.start_amount} BTC по курсу ${info.rate}
-          Дополнительно:
-          Объем: ${info.start_amount}
-          Купили: ${order.price}
-          Продали: ${order.sell} (${info.rate} по данным btc-e с учетом коммисии)
-          Наценка: ${order.markup}
-          Заработок: $${order.sell - order.price}
-          Коммисия: 0.4%
-          order_id: ${order.id}
-        `)
+🎉 Продали ${info.start_amount} BTC по курсу ${info.rate}
+объем: ${info.start_amount} BTC
+купили: $${order.price}
+продали: $${order.sell} (${info.rate} по данным btc-e с учетом коммисии)
+расход: $${(order.amount * order.price).toFixed(3)}
+наценка: ${order.markup}%
+заработок: $${order.sell - order.price}
+заработаем: $${((config.amount * order.sell) * (config.markup / 100))}
+коммисия: $${((config.amount * order.sell) - (order.price + ((config.amount * order.sell) * (config.markup / 100))))}
+order_id: ${order.id}`)
       }
 
       // Удаляем выполненный order из orders
@@ -202,9 +198,9 @@ const observe = async () => {
     }
 
     // Объем с коммисией
-    let amount = (config.amount * (config.commission / 100)) + config.amount
+    let amount = (config.amount / (1 - (config.commission / 100)))
 
-    // А так же проверяем, реально ли продать с 2% накидкой
+    // А так же проверяем, реально ли продать с накидкой
     let markupPrice = (current.price.min * ((config.markup + (config.commission * 2)) / 100)) + current.price.min
     let markupPriceMin = null
     let markupPriceMax = null
@@ -254,11 +250,12 @@ const observe = async () => {
 
         // Оповещаем об покупке
         bot.sendMessage(config.user, `
-            ⌛ Запрос на покупку (${buy.order_id}) ${amount} BTC по курсу ${current.price.min}
+⌛ Запрос на покупку (${buy.order_id}) ${amount} BTC по курсу ${current.price.min} \n\r
 расход: $${(amount * current.price.min).toFixed(3)}
-коммисия: $${(amount * current.price.min) - (config.amount * current.price.min)}, ${(amount - config.amount).toFixed(6)} BTC
 получим: ${config.amount} BTC
-заработаем: $${((config.amount * markupPrice) - (config.commission / 100)) - ((amount * current.price.min) - current.price.min)}
+заработаем: $${((config.amount * markupPrice) * (config.markup / 100))}
+коммисия: $${((config.amount * markupPrice) - (current.price.min + ((config.amount * markupPrice) * (config.markup / 100))))}
+коммисия за покупку BTC: ${(amount - config.amount).toFixed(6)} BTC
 мин. цена: ${markupPriceMin}
 макс. цена: ${markupPriceMax}
 цена продажи: ${markupPrice}`)
