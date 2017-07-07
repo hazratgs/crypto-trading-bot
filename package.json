@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js",
-    "deamon": "forever -l ./log.txt start index.js",
-    "debug": "node-debug index.js"
+    "start": "pm2 start index.js -l log.txt",
+    "stop": "pm2 stop index.js"
   },
   "author": "hazratgs",
   "license": "ISC",
