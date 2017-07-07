@@ -197,8 +197,8 @@ const observe = async () => {
       }
     }
 
-    // Объем с коммисией
-    let amount = (config.amount / (1 - (config.commission / 100)))
+    // Объем с коммисией не более 8 нулей
+    let amount = (config.amount / (1 - (config.commission / 100))).toFixed(8)
 
     // А так же проверяем, реально ли продать с накидкой
     let markupPrice = (current.price.min * ((config.markup + (config.commission * 2)) / 100)) + current.price.min
@@ -261,7 +261,8 @@ const observe = async () => {
 цена продажи: ${markupPrice}`)
 
       } catch (e) {
-        console.log(`Buy error: ${e}`)
+        console.log(`Buy error:`)
+        console.log(e)
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     }
