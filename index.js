@@ -195,8 +195,10 @@ const observe = async () => {
     // Объем с коммисией не более 8 нулей
     let amount = (config.amount / (1 - (config.commission / 100))).toFixed(8)
 
+    const minPrice = (current.price.min * (0.05 / 100)) + current.price.min
+
     // А так же проверяем, реально ли продать с накидкой
-    let markupPrice = (current.price.min * ((config.markup + (config.commission * 2)) / 100)) + current.price.min
+    let markupPrice = (minPrice * ((config.markup + (config.commission * 2)) / 100)) + minPrice
     let markupPriceMin = null
     let markupPriceMax = null
 
@@ -230,26 +232,26 @@ const observe = async () => {
         let buy = await btce.trade({
           pair: config.pair,
           type: 'buy',
-          rate: current.price.min,
+          rate: minPrice,
           amount: amount // с учетом коммисии
         })
 
         // Наблюдаем за ордером
         orders.push({
           id: buy.order_id,
-          price: current.price.min,
+          price: minPrice,
           sell: markupPrice,
           markup: config.markup,
           amount: amount
         })
 
         // Оповещаем об покупке
-        let consumption = (amount * current.price.min).toFixed(3)
+        let consumption = (amount * minPrice).toFixed(3)
         let commission = ((config.amount * markupPrice) * (config.commission / 100))
         let income = ((config.amount * markupPrice) - commission).toFixed(3)
 
         bot.sendMessage(config.user, `
-⌛ Запрос на покупку ${amount} BTC по курсу ${current.price.min}
+⌛ Запрос на покупку ${amount} BTC по курсу ${minPrice}
 расход: $${consumption}
 получим: ${config.amount} BTC
 наценка: ${config.markup}%
