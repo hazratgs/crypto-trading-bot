@@ -65,7 +65,7 @@ const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 
 const buyAmount = async (rate) => {
   const info = await btce.getInfo()
   const usd = info.funds.usd
-  return (rate / usd).toFixed(8)
+  return (usd / rate).toFixed(8)
 }
 
 // Выставление на продажу
@@ -257,7 +257,6 @@ const trades = async () => {
 // Наблюдение за последними свечами, для выявления покупки
 const observe = async () => {
   try {
-    console.log(candles.length)
     if (!candles.length || candles.length < 120) {
       return false
     }
