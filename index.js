@@ -60,7 +60,40 @@ const observeActiveOrders = async () => {
     console.log('Error observeOrders:')
     console.log(e)
   }
-  console.log(orders)
+}
+
+// Удаление ордера
+const removeOrder = (id) => {
+  for (let key in orders){
+    if (orders[key] === id) {
+      orders.splice(key, 1)
+    }
+  }
+}
+
+// Выставление на продажу
+const sale = async (rate, amount) => {
+  try {
+    // Цена продажи
+    let price = getMarkupPirce(rate)
+
+    // Выставляем на продажу
+    let buy = await btce.trade({
+      pair: config.pair,
+      type: 'sell',
+      rate: price,
+      amount: amount
+    })
+
+    // Оповещаем пользователя о выставлении на продажу
+    bot.sendMessage(config.user, `💰 Выставили на продажу ${amount} BTC по курсу ${price}\n order: ${buy.order_id}`)
+
+  } catch (e) {
+    console.log(`Error observeOrders Buy: ${e}`)
+    console.log(e)
+
+    bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
+  }
 }
 
 // Наблюдение за ордерами
@@ -69,6 +102,30 @@ const observeOrders = async () => {
     try {
       const info = await btce.orderInfo(id)
       const order = info[id]
+
+      // Если ордер отменен, удаляем его из наблюдения
+      if (order.status === 2) {
+        removeOrder(id)
+        return false
+      }
+
+      // Если ордер на половину выполнен, но срок прошел
+      // выставляем на продажу купленный объем
+      if (order.status === 3) {
+        // Объем, который мы купили
+        let buyAmount = (order.start_amount - order.amount)
+
+        // Оповещаем пользователя о купле
+        bot.sendMessage(config.user, `💰 Частично купили ${buyAmount} btc из ${order.start_amount} btc по курсу ${order.rate}\n order_id: ${id}`)
+
+        // Выставляем частично купленный объем на продажу
+        await sale(order.rate, buyAmount)
+
+        // Удаляем частично выполненный ордер
+        removeOrder(id)
+
+        return false
+      }
 
       // Проверяем срок ордера на покупку
       if (order.type === 'buy' && await orderCancelLimit(id, order)) return false
@@ -79,29 +136,11 @@ const observeOrders = async () => {
       if (order.type === 'buy') {
 
         // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `💰 Купили ${order.amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
+        bot.sendMessage(config.user, `💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
 
-        try {
-          // Цена продажи
-          let price = getMarkupPirce(order.rate)
+        // Выставляем на продажу
+        await sale(order.rate, order.start_amount)
 
-          // Выставляем на продажу
-          let buy = await btce.trade({
-            pair: config.pair,
-            type: 'sell',
-            rate: price,
-            amount: config.amount
-          })
-
-          // Оповещаем пользователя о выставлении на продажу
-          bot.sendMessage(config.user, `💰 Выставили на продажу ${config.amount} BTC по курсу ${price}\n order: ${buy.order_id}`)
-
-        } catch (e) {
-          console.log(`Error observeOrders Buy: ${e}`)
-          console.log(e)
-
-          bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
-        }
       } else {
 
         // Оповещаем о продаже
@@ -111,6 +150,10 @@ const observeOrders = async () => {
           order: ${id}
         `)
       }
+
+      // Удаляем ордер из наблюдения
+      removeOrder(id)
+
     } catch (e) {
       console.log('Error observeOrders:')
       console.log(e)
@@ -128,11 +171,6 @@ const orderCancelLimit = async (id, order) => {
   // Если срок жизни прошел, отменяем ордер
   if (currentTime > (order.timestamp_created + timeOrder)) {
     try {
-
-      if (order.status === 2) {
-        // Если товар на половину куплен, выставляем на продажу половину
-      }
-
       // Отмена ордера
       await btce.cancelOrder(id)
 
