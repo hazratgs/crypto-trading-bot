@@ -15,7 +15,10 @@ const history = []
 const candles = []
 
 // Список ордеров на наблюдении
-const orders = []
+// const orders = []
+
+// время жизни ордера
+const timeOrder = 60
 
 // Поиск в истории транзакций
 const findHistory = (tid) => {
@@ -44,68 +47,88 @@ const lastTransaction = async () => {
 }
 
 // Наблюдение за ордерами
-const observeOrders = () => {
-  orders.map(async order => {
-    try {
-      let res = await btce.orderInfo(order.id)
-      let info = res[order.id]
-
-      // Оповещаем только о завершенных ордерах
-      if (info.status !== 1) return false
-
-      if (info.type === 'buy') {
-
-        // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `💰 Купили ${info.start_amount} BTC по курсу ${info.rate}\n order_id: ${order.id}`)
-
-        try {
-          // Выставляем на продажу ...
-          let buy = await btce.trade({
-            pair: config.pair,
-            type: 'sell',
-            rate: order.sell,
-            amount: config.amount
-          })
-
-          // Наблюдаем за ордером
-          orders.push({
-            id: buy.order_id,
-            price: order.price, // сумма закупки
-            sell: order.sell,
-            markup: config.markup
-          })
-
-          // Оповещаем пользователя о выставлении на продажу
-          bot.sendMessage(config.user, `💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}\n order_id: ${buy.order_id}`)
-
-        } catch (e) {
-          console.log(`Error observeOrders Buy: ${e}`)
-          bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
-        }
-      } else {
-
-        // Оповещаем о продаже
-        bot.sendMessage(config.user, `
-          🎉 Продали ${info.start_amount} BTC по курсу ${info.rate}\n
-          купили: $${order.price}\n
-          продали: $${order.sell} (${info.rate} по данным btc-e с учетом коммисии)\n
-          наценка: ${order.markup}%\n
-          order_id: ${order.id}
-        `)
-      }
-
-      // Удаляем выполненный order из orders
-      for (let key in orders){
-        if (orders[key].id === order.id) {
-          orders.splice(key, 1)
-        }
-      }
-    } catch (e) {
-      console.log(`Error observeOrders:`)
-      console.log(e)
+const observeOrders = async () => {
+  try {
+    // Получение списка активных ордеров
+    let orders = await btce.activeOrders(config.pair)
+    for (let id in orders) {
+      await observeOrdersData(id, orders[id])
     }
-  })
+  } catch (e) {
+    console.log('Error observeOrders:')
+    console.log(e)
+  }
 }
+
+const observeOrdersData = async (id, order) => {
+  // let res = await btce.orderInfo(order.id)
+  // let info = res[order.id]
+
+  // Проверяем срок ордера на покупку
+  if (order.type === 'buy' && await orderCancelLimit(order)) return false
+
+  // Оповещаем только о завершенных ордерах
+  if (order.status !== 1) return false
+
+  if (order.type === 'buy') {
+
+    // Оповещаем пользователя о купле
+    bot.sendMessage(config.user, `💰 Купили ${order.amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
+
+    try {
+      // Выставляем на продажу ...
+      let buy = await btce.trade({
+        pair: config.pair,
+        type: 'sell',
+        rate: order.sell,
+        amount: config.amount
+      })
+
+      // Оповещаем пользователя о выставлении на продажу
+      bot.sendMessage(config.user, `💰 Выставили на продажу ${info.start_amount} BTC по курсу ${order.sell}\n order_id: ${buy.order_id}`)
+
+    } catch (e) {
+      console.log(`Error observeOrders Buy: ${e}`)
+      bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
+    }
+  } else {
+
+    // Оповещаем о продаже
+    bot.sendMessage(config.user, `
+      🎉 Продали ${info.start_amount} BTC по курсу ${info.rate}\n
+      купили: $${order.price}\n
+      продали: $${order.sell} (${info.rate} по данным btc-e с учетом коммисии)\n
+      наценка: ${order.markup}%\n
+      order_id: ${order.id}
+    `)
+  }
+}
+
+// Отмена ордера по истичению 15 минут
+const orderCancelLimit = async (order) => {
+  let currentTime = Math.floor(Date.now() / 1000)
+
+  // Если срок жизни прошел, отменяем ордер
+  if (currentTime > (order.timestamp_created + timeOrder)) {
+    try {
+      // Отмена ордера
+      await btce.cancelOrder(order.id)
+
+      // Сообщаем об удалении
+      return true
+    } catch (e) {
+      console.log(`Error orderCancelLimit: ${order.id}`)
+      console.log(e)
+
+      // ошибка удаления
+      return false
+    }
+  }
+  // Срок ордера еще не окончен
+  return false
+}
+
+const getMarkupPirce = (rate) => (rate * ((config.markup + (config.commission * 2)) / 100)) + rate
 
 // Формирование структурированных данных купли/продажи
 const trades = async () => {
@@ -199,7 +222,7 @@ const observe = async () => {
     const minPrice = (current.price.min * (0.05 / 100)) + current.price.min
 
     // А так же проверяем, реально ли продать с накидкой
-    let markupPrice = (minPrice * ((config.markup + (config.commission * 2)) / 100)) + minPrice
+    let markupPrice = getMarkupPirce(minPrice)
     let markupPriceMin = null
     let markupPriceMax = null
 
@@ -280,7 +303,7 @@ const observe = async () => {
 // setInterval(trades, 1000)
 
 // Наблюдение за ордерами
-// setInterval(observeOrders, 4000)
+setInterval(observeOrders, 5000)
 
 // Отслеживать каждую минуту ситуацию на рынке
 // setInterval(observe, 60000)
