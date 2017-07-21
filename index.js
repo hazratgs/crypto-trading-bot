@@ -86,7 +86,7 @@ const sale = async (rate, amount) => {
     bot.sendMessage(config.user, `💰 Выставили на продажу ${amount} btc по курсу ${price}\n order: ${buy.order_id}`)
 
   } catch (e) {
-    console.log(`Error observeOrders Buy: ${e}`)
+    console.log(`Error Buy: ${e}`)
     console.log(e)
 
     bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
@@ -201,15 +201,17 @@ const observeActiveOrders = async () => {
       }
     }
   } catch (e) {
-    console.log('Error observeOrders:')
-    console.log(e)
+    if (e.error !== 'no orders') {
+      console.log('Error observeActiveOrders:')
+      console.log(e)
+    }
   }
 }
 
 // Формирование структурированных данных купли/продажи
 const trades = async () => {
   try {
-    let trades = await btce.trades(config.pair, (!history.length ? 1000 : 150))
+    let trades = await btce.trades(config.pair, (!history.length ? 5000 : 150))
     for (let item of trades[config.pair].reverse()){
 
       // Пропускаем повторы
@@ -256,7 +258,7 @@ const trades = async () => {
 const observe = async () => {
   try {
     console.log(candles.length)
-    if (!candles.length || candles.length < 240) {
+    if (!candles.length || candles.length < 120) {
       return false
     }
 
@@ -364,7 +366,13 @@ const observe = async () => {
 }
 
 // Формирование структурированных данных транзакций
-setInterval(trades, 1000)
+setTimeout(async () => {
+  // Первая запуск загружает большой список данных
+  await trades()
+
+  // Теперь просто загружаем список постепенно
+  setInterval(trades, 1000)
+}, 1000)
 
 // Наблюдение за ордерами
 setInterval(observeActiveOrders, 1000)
