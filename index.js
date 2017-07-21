@@ -46,22 +46,6 @@ const lastTransaction = async () => {
   }
 }
 
-// Наблюдение за активными ордерами
-const observeActiveOrders = async () => {
-  try {
-    // Получение списка активных ордеров
-    let activeOrders = await btce.activeOrders(config.pair)
-    for (let id in activeOrders) {
-      if (!orders.filter(item => item === id).length) {
-        orders.push(id)
-      }
-    }
-  } catch (e) {
-    console.log('Error observeOrders:')
-    console.log(e)
-  }
-}
-
 // Удаление ордера
 const removeOrder = (id) => {
   for (let key in orders){
@@ -69,6 +53,19 @@ const removeOrder = (id) => {
       orders.splice(key, 1)
     }
   }
+}
+
+// Формирование цены продажи
+const getMarkupPirce = (rate) => ((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(3)
+
+// Получаем коммисию
+const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 100))))
+
+// Получаем объем исходя из курса и суммы денег
+const buyAmount = async (rate) => {
+  const info = await btce.getInfo()
+  const usd = info.funds.usd
+  return (rate / usd).toFixed(8)
 }
 
 // Выставление на продажу
@@ -86,7 +83,7 @@ const sale = async (rate, amount) => {
     })
 
     // Оповещаем пользователя о выставлении на продажу
-    bot.sendMessage(config.user, `💰 Выставили на продажу ${amount} BTC по курсу ${price}\n order: ${buy.order_id}`)
+    bot.sendMessage(config.user, `💰 Выставили на продажу ${amount} btc по курсу ${price}\n order: ${buy.order_id}`)
 
   } catch (e) {
     console.log(`Error observeOrders Buy: ${e}`)
@@ -94,6 +91,34 @@ const sale = async (rate, amount) => {
 
     bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
   }
+}
+
+// Отмена ордера по истичению 15 минут
+const orderCancelLimit = async (id, order) => {
+  // Если ордер выполнен, пропускам проверку
+  if (order.status === 1) return false
+
+  let currentTime = Math.floor(Date.now() / 1000)
+
+  // Если срок жизни прошел, отменяем ордер
+  if (currentTime > (order.timestamp_created + timeOrder)) {
+    try {
+      // Отмена ордера
+      await btce.cancelOrder(id)
+
+      // Сообщаем об удалении
+      console.log(`${id} истек срок`)
+      return true
+    } catch (e) {
+      console.log(`Error orderCancelLimit: ${order.id}`)
+      console.log(e)
+
+      // ошибка удаления
+      return false
+    }
+  }
+  // Срок ордера еще не окончен
+  return false
 }
 
 // Наблюдение за ордерами
@@ -112,6 +137,10 @@ const observeOrders = async () => {
       // Если ордер на половину выполнен, но срок прошел
       // выставляем на продажу купленный объем
       if (order.status === 3) {
+        console.log('...........................')
+        console.log('Ордер на половину выполнен:')
+        console.log(order)
+        console.log('...........................')
         // Объем, который мы купили
         let buyAmount = (order.start_amount - order.amount)
 
@@ -161,45 +190,20 @@ const observeOrders = async () => {
   })
 }
 
-// Отмена ордера по истичению 15 минут
-const orderCancelLimit = async (id, order) => {
-  // Если ордер выполнен, пропускам проверку
-  if (order.status === 1) return false
-
-  let currentTime = Math.floor(Date.now() / 1000)
-
-  // Если срок жизни прошел, отменяем ордер
-  if (currentTime > (order.timestamp_created + timeOrder)) {
-    try {
-      // Отмена ордера
-      await btce.cancelOrder(id)
-
-      // Сообщаем об удалении
-      console.log(`${id} истек срок`)
-      return true
-    } catch (e) {
-      console.log(`Error orderCancelLimit: ${order.id}`)
-      console.log(e)
-
-      // ошибка удаления
-      return false
+// Наблюдение за активными ордерами
+const observeActiveOrders = async () => {
+  try {
+    // Получение списка активных ордеров
+    let activeOrders = await btce.activeOrders(config.pair)
+    for (let id in activeOrders) {
+      if (!orders.filter(item => item === id).length) {
+        orders.push(id)
+      }
     }
+  } catch (e) {
+    console.log('Error observeOrders:')
+    console.log(e)
   }
-  // Срок ордера еще не окончен
-  return false
-}
-
-// Формирование цены продажи
-const getMarkupPirce = (rate) => ((rate * ((config.markup + (config.commission * 2)) / 100)) + rate).toFixed(3)
-
-// Получаем коммисию
-const getCommision = (amount) => (amount - (amount * (1 - (config.commission / 100))))
-
-// Получаем объем исходя из курса и суммы денег
-const buyAmount = async (rate = 2500) => {
-  const info = await btce.getInfo()
-  const usd = info.funds.usd
-  return (rate / usd).toFixed(8)
 }
 
 // Формирование структурированных данных купли/продажи
@@ -251,6 +255,7 @@ const trades = async () => {
 // Наблюдение за последними свечами, для выявления покупки
 const observe = async () => {
   try {
+    console.log(candles.length)
     if (!candles.length || candles.length < 240) {
       return false
     }
@@ -333,7 +338,7 @@ const observe = async () => {
 
         // Оповещаем об покупке
         let consumption = (amount * minPrice).toFixed(3)
-        let commission = getCommision(amount)
+        let commission = getCommission(amount)
 
         bot.sendMessage(config.user, `
           ⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}\n
@@ -359,13 +364,13 @@ const observe = async () => {
 }
 
 // Формирование структурированных данных транзакций
-// setInterval(trades, 1000)
+setInterval(trades, 1000)
 
 // Наблюдение за ордерами
-// setInterval(observeActiveOrders, 1000)
+setInterval(observeActiveOrders, 1000)
 
 // Наблюдение за ордерами
-// setInterval(observeOrders, 5000)
+setInterval(observeOrders, 5000)
 
 // Отслеживать каждую минуту ситуацию на рынке
-// setInterval(observe, 60000)
+setInterval(observe, 60000)
