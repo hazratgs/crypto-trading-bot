@@ -189,7 +189,18 @@ const orderCancelLimit = async (id, order) => {
   return false
 }
 
-const getMarkupPirce = (rate) => (rate * ((config.markup + (config.commission * 2)) / 100)) + rate
+// Формирование цены продажи
+const getMarkupPirce = (rate) => ((rate * ((config.markup + (config.commission * 2)) / 100)) + rate).toFixed(3)
+
+// Получаем коммисию
+const getCommision = (amount) => (amount - (amount * (1 - (config.commission / 100))))
+
+// Получаем объем исходя из курса и суммы денег
+const buyAmount = async (rate = 2500) => {
+  const info = await btce.getInfo()
+  const usd = info.funds.usd
+  return (rate / usd).toFixed(8)
+}
 
 // Формирование структурированных данных купли/продажи
 const trades = async () => {
@@ -277,18 +288,17 @@ const observe = async () => {
       }
     }
 
-    // Объем с коммисией не более 8 нулей
-    let amount = (config.amount / (1 - (config.commission / 100))).toFixed(8)
-
+    // Курс по которому мы купим btc
     const minPrice = (current.price.min * (0.05 / 100)) + current.price.min
 
+    // объем сходя из всей суммы
+    const amount = await buyAmount(minPrice)
+
     // А так же проверяем, реально ли продать с накидкой
-    let markupPrice = getMarkupPirce(minPrice)
+    const markupPrice = getMarkupPirce(minPrice)
+
     let markupPriceMin = null
     let markupPriceMax = null
-
-    // Округляем до сотых
-    markupPrice = markupPrice.toFixed(3)
 
     let resolution = false
 
@@ -323,26 +333,23 @@ const observe = async () => {
 
         // Оповещаем об покупке
         let consumption = (amount * minPrice).toFixed(3)
-        let commission = ((config.amount * markupPrice) * (config.commission / 100))
-        let income = ((config.amount * markupPrice) - commission).toFixed(3)
+        let commission = getCommision(amount)
 
         bot.sendMessage(config.user, `
-          ⌛ Запрос на покупку ${amount} BTC по курсу ${minPrice}\n
+          ⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}\n
           расход: $${consumption}\n
-          получим: ${config.amount} BTC\n
+          получим: ${(amount - commission)} btc\n
+          коммисия: $${(commission * minPrice)} (${commission} btc)\n
           наценка: ${config.markup}%\n
-          общая прибыль: $${(config.amount * markupPrice)}\n
-          заработаем: $${income}\n
-          чистая прибыль: $${(income - consumption)}\n
-          коммисия: $${commission}\n
-          мин. цена: ${markupPriceMin}\n
-          макс. цена: ${markupPriceMax}\n
+          мин. цена: $${markupPriceMin}\n
+          макс. цена: $${markupPriceMax}\n
           цена продажи: ${markupPrice}\n
           order: ${buy.order_id}
         `)
       } catch (e) {
         console.log(`Buy error:`)
         console.log(e)
+
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     }
@@ -355,10 +362,10 @@ const observe = async () => {
 // setInterval(trades, 1000)
 
 // Наблюдение за ордерами
-setInterval(observeActiveOrders, 1000)
+// setInterval(observeActiveOrders, 1000)
 
 // Наблюдение за ордерами
-setInterval(observeOrders, 5000)
+// setInterval(observeOrders, 5000)
 
 // Отслеживать каждую минуту ситуацию на рынке
 // setInterval(observe, 60000)
