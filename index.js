@@ -56,23 +56,23 @@ const removeOrder = (id) => {
 }
 
 // Формирование цены продажи
-const getMarkupPirce = (rate) => parseFloat((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(8)
+const getMarkupPrice = (rate) => parseFloat(((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(8))
 
 // Получаем коммисию
-const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 100))))
+const getCommission = (amount) => parseFloat((amount - (amount * (1 - (config.commission / 100)))).toFixed(8))
 
 // Получаем объем исходя из курса и суммы денег
 const buyAmount = async (rate) => {
   const info = await btce.getInfo()
   const usd = info.funds.usd
-  return (usd / rate).toFixed(8)
+  return parseFloat((50 / rate).toFixed(8))
 }
 
 // Выставление на продажу
 const sale = async (rate, amount) => {
   try {
     // Цена продажи
-    let price = getMarkupPirce(rate)
+    let price = getMarkupPrice(rate)
 
     // Выставляем на продажу
     let buy = await btce.trade({
@@ -89,7 +89,14 @@ const sale = async (rate, amount) => {
     console.log(`Error Buy: ${e}`)
     console.log(e)
 
-    bot.sendMessage(config.user, `Ошибка при покупке: ${e.error}`)
+    console.log({
+      pair: config.pair,
+      type: 'sell',
+      rate: getMarkupPrice(rate),
+      amount: amount
+    })
+
+    bot.sendMessage(config.user, `Ошибка при продаже: ${e.error}`)
   }
 }
 
@@ -168,15 +175,12 @@ const observeOrders = async () => {
         bot.sendMessage(config.user, `💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
 
         // Выставляем на продажу
-        await sale(order.rate, order.start_amount)
+        await sale(parseFloat(order.rate.toFixed(8)), parseFloat(order.start_amount.toFixed(8)))
 
       } else {
 
         // Оповещаем о продаже
-        bot.sendMessage(config.user, `
-          🎉 Продали ${config.amount} BTC по курсу ${order.rate}\n
-          наценка: ${order.markup}%\n
-          order: ${id}
+        bot.sendMessage(config.user, `🎉 Продали ${config.amount} BTC по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}
         `)
       }
 
@@ -295,14 +299,14 @@ const observe = async () => {
     }
 
     // Курс по которому мы купим btc
-    const minPrice = ((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3)
+    const minPrice = parseFloat(((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3))
 
-    // объем сходя из всей суммы
+    // объем исходя из всей суммы
     const amount = await buyAmount(minPrice)
 
-    // А так же проверяем, реально ли продать с накидкой
-    const markupPrice = getMarkupPirce(minPrice)
-    console.log('markupPrice ' + markupPrice)
+    // Минимальная цена продажи
+    const markupPrice = getMarkupPrice(minPrice)
+
     let markupPriceMin = null
     let markupPriceMax = null
 
@@ -341,17 +345,20 @@ const observe = async () => {
         let consumption = (amount * minPrice).toFixed(3)
         let commission = getCommission(amount)
 
-        bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}\nрасход: $${consumption}\nполучим: ${(amount - commission)} btc\nкоммисия: $${(commission * minPrice)} (${commission} btc)\nнаценка: ${config.markup}%\nмин. цена: $${markupPriceMin}\nмакс. цена: $${markupPriceMax}\nцена продажи: ${markupPrice}\norder: ${buy.order_id}`)
+        bot.sendMessage(config.user, `
+⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}
+расход: $${consumption}
+получим: ${(amount - commission)} btc
+коммисия: $${(commission * minPrice)} (${commission} btc)
+наценка: ${config.markup}%
+мин. цена: $${markupPriceMin}
+макс. цена: $${markupPriceMax}
+цена продажи: ${markupPrice}
+order: ${buy.order_id}`)
+
       } catch (e) {
         console.log(`Buy error:`)
         console.log(e)
-        console.log({
-          pair: config.pair,
-          type: 'buy',
-          rate: minPrice,
-          amount: amount // с учетом коммисии
-        })
-
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     }
