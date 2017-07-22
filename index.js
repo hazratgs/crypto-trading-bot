@@ -56,14 +56,7 @@ const removeOrder = (id) => {
 }
 
 // Формирование цены продажи
-const getMarkupPirce = (rate) => {
-  let price = parseFloat((rate * ((config.markup + config.commission) / 100)) + rate)
-  console.log(price)
-  console.log(rate)
-  console.log(typeof price)
-  console.log(price.toFixed(3))
-  return price.toFixed(3)
-}
+const getMarkupPirce = (rate) => parseFloat((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(8)
 
 // Получаем коммисию
 const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 100))))
@@ -72,7 +65,7 @@ const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 
 const buyAmount = async (rate) => {
   const info = await btce.getInfo()
   const usd = info.funds.usd
-  return (10 / rate).toFixed(8)
+  return (5 / rate).toFixed(8)
 }
 
 // Выставление на продажу
