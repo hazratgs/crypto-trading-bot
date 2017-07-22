@@ -56,7 +56,14 @@ const removeOrder = (id) => {
 }
 
 // Формирование цены продажи
-const getMarkupPirce = (rate) => ((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(3)
+const getMarkupPirce = (rate) => {
+  let price = parseFloat((rate * ((config.markup + config.commission) / 100)) + rate)
+  console.log(price)
+  console.log(rate)
+  console.log(typeof price)
+  console.log(price.toFixed(3))
+  return price.toFixed(3)
+}
 
 // Получаем коммисию
 const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 100))))
@@ -65,7 +72,7 @@ const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 
 const buyAmount = async (rate) => {
   const info = await btce.getInfo()
   const usd = info.funds.usd
-  return (usd / rate).toFixed(8)
+  return (10 / rate).toFixed(8)
 }
 
 // Выставление на продажу
@@ -287,22 +294,22 @@ const observe = async () => {
     }
 
     // Поиск выгодного момента
-    for (let item of data){
-      if (current.price.min > item.price.min) {
-        // Не самая выгодная цена, сделка сорвана
-        return false
-      }
-    }
+    // for (let item of data){
+    //   if (current.price.min > item.price.min) {
+    //     // Не самая выгодная цена, сделка сорвана
+    //     return false
+    //   }
+    // }
 
     // Курс по которому мы купим btc
-    const minPrice = (current.price.min * (0.05 / 100)) + current.price.min
+    const minPrice = ((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3)
 
     // объем сходя из всей суммы
     const amount = await buyAmount(minPrice)
 
     // А так же проверяем, реально ли продать с накидкой
     const markupPrice = getMarkupPirce(minPrice)
-
+    console.log('markupPrice ' + markupPrice)
     let markupPriceMin = null
     let markupPriceMax = null
 
@@ -355,6 +362,12 @@ const observe = async () => {
       } catch (e) {
         console.log(`Buy error:`)
         console.log(e)
+        console.log({
+          pair: config.pair,
+          type: 'buy',
+          rate: minPrice,
+          amount: amount // с учетом коммисии
+        })
 
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
