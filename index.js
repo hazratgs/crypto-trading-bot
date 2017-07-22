@@ -65,7 +65,7 @@ const getCommission = (amount) => (amount - (amount * (1 - (config.commission / 
 const buyAmount = async (rate) => {
   const info = await btce.getInfo()
   const usd = info.funds.usd
-  return (5 / rate).toFixed(8)
+  return (usd / rate).toFixed(8)
 }
 
 // Выставление на продажу
@@ -287,12 +287,12 @@ const observe = async () => {
     }
 
     // Поиск выгодного момента
-    // for (let item of data){
-    //   if (current.price.min > item.price.min) {
-    //     // Не самая выгодная цена, сделка сорвана
-    //     return false
-    //   }
-    // }
+    for (let item of data){
+      if (current.price.min > item.price.min) {
+        // Не самая выгодная цена, сделка сорвана
+        return false
+      }
+    }
 
     // Курс по которому мы купим btc
     const minPrice = ((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3)
@@ -341,17 +341,7 @@ const observe = async () => {
         let consumption = (amount * minPrice).toFixed(3)
         let commission = getCommission(amount)
 
-        bot.sendMessage(config.user, `
-          ⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}\n
-          расход: $${consumption}\n
-          получим: ${(amount - commission)} btc\n
-          коммисия: $${(commission * minPrice)} (${commission} btc)\n
-          наценка: ${config.markup}%\n
-          мин. цена: $${markupPriceMin}\n
-          макс. цена: $${markupPriceMax}\n
-          цена продажи: ${markupPrice}\n
-          order: ${buy.order_id}
-        `)
+        bot.sendMessage(config.user, `⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}\nрасход: $${consumption}\nполучим: ${(amount - commission)} btc\nкоммисия: $${(commission * minPrice)} (${commission} btc)\nнаценка: ${config.markup}%\nмин. цена: $${markupPriceMin}\nмакс. цена: $${markupPriceMax}\nцена продажи: ${markupPrice}\norder: ${buy.order_id}`)
       } catch (e) {
         console.log(`Buy error:`)
         console.log(e)
