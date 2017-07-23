@@ -56,7 +56,7 @@ const removeOrder = (id) => {
 }
 
 // Формирование цены продажи
-const getMarkupPrice = (rate) => parseFloat(((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(8))
+const getMarkupPrice = (rate) => parseFloat(((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(3))
 
 // Получаем коммисию
 const getCommission = (amount) => parseFloat((amount - (amount * (1 - (config.commission / 100)))).toFixed(8))
@@ -75,11 +75,18 @@ const sale = async (rate, amount) => {
     let price = getMarkupPrice(rate)
 
     // Выставляем на продажу
+    console.log({
+      pair: config.pair,
+      type: 'sell',
+      rate: price,
+      amount: parseFloat((amount - getCommission(amount)).toFixed(8))
+    })
+
     let buy = await btce.trade({
       pair: config.pair,
       type: 'sell',
       rate: price,
-      amount: amount
+      amount: parseFloat((amount - getCommission(amount)).toFixed(8))
     })
 
     // Оповещаем пользователя о выставлении на продажу
@@ -88,13 +95,6 @@ const sale = async (rate, amount) => {
   } catch (e) {
     console.log(`Error Buy: ${e}`)
     console.log(e)
-
-    console.log({
-      pair: config.pair,
-      type: 'sell',
-      rate: getMarkupPrice(rate),
-      amount: amount
-    })
 
     bot.sendMessage(config.user, `Ошибка при продаже: ${e.error}`)
   }
@@ -127,6 +127,15 @@ const orderCancelLimit = async (id, order) => {
   // Срок ордера еще не окончен
   return false
 }
+
+(async function () {
+  try {
+    let b = await sale(2692.049, 0.01870322)
+
+  } catch (e) {
+  }
+
+}())
 
 // Наблюдение за ордерами
 const observeOrders = async () => {
@@ -175,7 +184,7 @@ const observeOrders = async () => {
         bot.sendMessage(config.user, `💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
 
         // Выставляем на продажу
-        await sale(parseFloat(order.rate.toFixed(8)), parseFloat(order.start_amount.toFixed(8)))
+        await sale(parseFloat(order.rate.toFixed(3)), parseFloat(order.start_amount.toFixed(8)))
 
       } else {
 
