@@ -143,6 +143,8 @@ const watch = async (transaction) => {
               amount: amount,
               repeat: 30
             }
+
+            bot.sendMessage(config.user, `⌛ Запрос на покупку ${task.amount} btc по курсу ${transaction.price}`)
             /*****************
             // let buy = await btce.trade({
             //   pair: config.pair,
@@ -208,6 +210,8 @@ order: ${buy.order_id}`)
             console.log(`ПРОДАЕМ ${task.amount} по курсу: ${transaction.price}, максимум: ${task.maxPrice}, установлено было: ${task.price}`)
             task = null
             // Продаем валюту
+            bot.sendMessage(config.user, `⌛ Выставляем на продужу на покупку ${task.amount} btc по курсу ${transaction.price}`)
+
           } catch (e) {
             console.log('Error sell')
             console.log(e)
