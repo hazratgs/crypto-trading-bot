@@ -17,6 +17,9 @@ const orders = []
 // Свечи
 const candles = []
 
+// Задача
+let task = null
+
 // время жизни ордера
 const timeOrder = 300
 
@@ -75,13 +78,6 @@ const sale = async (rate, amount) => {
     let price = getMarkupPrice(rate)
 
     // Выставляем на продажу
-    console.log({
-      pair: config.pair,
-      type: 'sell',
-      rate: price,
-      amount: parseFloat((amount - getCommission(amount)).toFixed(8))
-    })
-
     let buy = await btce.trade({
       pair: config.pair,
       type: 'sell',
@@ -98,6 +94,140 @@ const sale = async (rate, amount) => {
 
     bot.sendMessage(config.user, `Ошибка при продаже: ${e.error}`)
   }
+}
+
+// Ожидание дна
+const watch = async (transaction) => {
+  if (!transaction || !task) return false
+
+  // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
+  if (!task.repeat) {
+    console.log('Сбросили задачу, цена поднялась!!!!!!!!!!!!')
+    task = null
+    return false
+  }
+
+  // Покупка
+  const buy = async () => {
+    // Курс падает, ждем дна
+    if (transaction.price < task.minPrice) {
+      task.minPrice = transaction.price
+    } else {
+
+      // Если цена последней транзакции выросла
+      // по сравнению с минимальной ценой, а так же все еще ниже часового минимума
+      if (((1 - (task.minPrice / transaction.price)) * 1000) >= 3) {
+        if (((1 - (task.minPrice / transaction.price)) * 1000) >= 4) {
+          task.repeat--
+          console.log(`Курс слишком высокий (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+          return false
+        }
+        console.log(`Достигли дна, курс начинает подниматься (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+
+        // Цена ниже установленного минимума
+        if (transaction.price <= task.price) {
+          console.log(`Цена ниже установленного минимума (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+          try {
+            console.log(`ПОКУПАЕМ ${task.amount} по курсу: ${transaction.price}, минимум: ${task.minPrice}, установлено было: ${task.price}`)
+            task = null
+
+            // Минимальная цена продажи
+            let markupPrice = getMarkupPrice(transaction.price)
+            let amount = getCommission(task.amount)
+
+            // Покупаем валюту
+            task = {
+              type: 'sell',
+              price: markupPrice,
+              minPrice: markupPrice, // минимальная достигнутая цена
+              amount: amount,
+              repeat: 30
+            }
+            /*****************
+            // let buy = await btce.trade({
+            //   pair: config.pair,
+            //   type: 'buy',
+            //   rate: transaction.price,
+            //   amount: task.amount // с учетом коммисии
+            // })
+
+            // Оповещаем об покупке
+            let consumption = (task.amount * transaction.price).toFixed(3)
+            let commission = getCommission(task.amount)
+
+            bot.sendMessage(config.user, `
+⌛ Запрос на покупку ${task.amount} btc по курсу ${transaction.price}
+расход: $${consumption}
+получим: ${(task.amount - commission)} btc
+коммисия: $${(commission * transaction.price)} (${commission} btc)
+наценка: ${config.markup}%
+мин. цена: $${task.minPrice}
+макс. цена: $${task.price}
+order: ${buy.order_id}`)
+            */
+          } catch (e) {
+            console.log('Error watch buy:')
+            console.log(e)
+          }
+        } else {
+          // Цена выросла по сравнению с установленным минимумом...
+
+          // Я думаю если она выросла не значительно, то можно брать...
+          // Надо подумать, стоит ли брать
+          console.log(`Цена выросла по сравнению с устаовленным минимумом (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+        }
+      } else {
+        // Цена немного выросла, но не значительно, ждем дна
+        console.log(`Цена ${transaction.price} выросла по сравнению с дном ${task.minPrice} (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+      }
+    }
+  }
+
+  // Продажа
+  const sell = async () => {
+    // Курс растет, ждем пика
+    if (transaction.price > task.maxPrice) {
+      task.maxPrice = transaction.price
+    } else {
+
+      // Если цена последней транзакции снизилась
+      // по сравнению с максимальной ценой, а так же все еще выше часового минимума
+      if (((1 - (transaction.price / task.maxPrice)) * 1000) >= 3) {
+        if (((1 - (transaction.price / task.maxPrice)) * 1000) >= 4) {
+          task.repeat--
+          console.log(`Курс слишком сильно упал (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+          return false
+        }
+
+        console.log(`Достигли максимума, курс начинает снижаться (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+
+        // Цена выше установленного минимума
+        if (transaction.price >= task.price) {
+          console.log(`Цена выше установленного минимума (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+          try {
+            console.log(`ПРОДАЕМ ${task.amount} по курсу: ${transaction.price}, максимум: ${task.maxPrice}, установлено было: ${task.price}`)
+            task = null
+            // Продаем валюту
+          } catch (e) {
+            console.log('Error sell')
+            console.log(e)
+          }
+        } else {
+          // Цена упала по сравнению с установленным минимумом...
+
+          // Я думаю если она упала не значительно, то можно продовать...
+          // Надо подумать, стоит ли продовать
+          console.log(`Цена упала по сравнению с устаовленным минимумом (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.maxPrice})`)
+        }
+      } else {
+        // Цена немного упала, но не значительно, ждем пика
+        console.log(`Цена ${transaction.price} упала по сравнению с пиком ${task.maxPrice} (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.maxPrice})`)
+      }
+    }
+  }
+
+  // Выполняем тип в зависимости от задачи
+  task.type === 'buy' ? buy() : sell()
 }
 
 // Отмена ордера по истичению 15 минут
@@ -128,15 +258,6 @@ const orderCancelLimit = async (id, order) => {
   return false
 }
 
-(async function () {
-  try {
-    let b = await sale(2692.049, 0.01870322)
-
-  } catch (e) {
-  }
-
-}())
-
 // Наблюдение за ордерами
 const observeOrders = async () => {
   orders.map(async id => {
@@ -163,6 +284,9 @@ const observeOrders = async () => {
         // Оповещаем пользователя о купле
         bot.sendMessage(config.user, `💰 Частично купили ${buyAmount} btc из ${order.start_amount} btc по курсу ${order.rate}\n order_id: ${id}`)
 
+        // очищаем задачу
+        task = null
+
         // Выставляем частично купленный объем на продажу
         await sale(order.rate, buyAmount)
 
@@ -182,6 +306,9 @@ const observeOrders = async () => {
 
         // Оповещаем пользователя о купле
         bot.sendMessage(config.user, `💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
+
+        // очищаем задачу
+        task = null
 
         // Выставляем на продажу
         await sale(parseFloat(order.rate.toFixed(3)), parseFloat(order.start_amount.toFixed(8)))
@@ -247,6 +374,11 @@ const trades = async () => {
         })
       }
 
+      // Отправляем данные в ожидание для покупки/продажи
+      if (history.length > 5000) {
+        await watch(item)
+      }
+
       // Вставляем событие в текущую свечи
       candles[0].items.unshift(item)
 
@@ -295,7 +427,7 @@ const observe = async () => {
     let lastTrade = await lastTransaction()
 
     // Ожидаем, что последняя транзакция, это продажа
-    if (lastTrade.type === 'buy') {
+    if (lastTrade.type === 'buy' || task !== null) {
       return false
     }
 
@@ -343,27 +475,18 @@ const observe = async () => {
     if (resolution) {
       // Покупаем
       try {
-        let buy = await btce.trade({
-          pair: config.pair,
+
+        // Добавляем задачу
+        task = {
           type: 'buy',
-          rate: minPrice,
-          amount: amount // с учетом коммисии
-        })
+          price: minPrice,
+          minPrice: minPrice, // минимальная достигнутая цена
+          amount: amount,
+          repeat: 30
+        }
 
-        // Оповещаем об покупке
-        let consumption = (amount * minPrice).toFixed(3)
-        let commission = getCommission(amount)
-
-        bot.sendMessage(config.user, `
-⌛ Запрос на покупку ${amount} btc по курсу ${minPrice}
-расход: $${consumption}
-получим: ${(amount - commission)} btc
-коммисия: $${(commission * minPrice)} (${commission} btc)
-наценка: ${config.markup}%
-мин. цена: $${markupPriceMin}
-макс. цена: $${markupPriceMax}
-цена продажи: ${markupPrice}
-order: ${buy.order_id}`)
+        // Оповещаем об создании задания
+        bot.sendMessage(config.user, `👁 Запущено наблюдение для покупки \n объем: ${amount} \n минимальная цена: ${minPrice}`)
 
       } catch (e) {
         console.log(`Buy error:`)
