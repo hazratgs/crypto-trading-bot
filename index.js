@@ -127,6 +127,14 @@ const watch = async (transaction) => {
         // Цена ниже установленного минимума
         if (transaction.price <= task.price) {
           console.log(`Цена ниже установленного минимума (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+
+          // Повторно проверяем
+          if (task.bottom !== 1) {
+            task.bottom++
+            console.log('Пытаемся повторно проверить сумму')
+            return false
+          }
+
           try {
             console.log(`ПОКУПАЕМ ${task.amount} по курсу: ${transaction.price}, минимум: ${task.minPrice}, установлено было: ${task.price}`)
             task = null
@@ -134,13 +142,14 @@ const watch = async (transaction) => {
             // Минимальная цена продажи
             let markupPrice = getMarkupPrice(transaction.price)
             let amount = getCommission(task.amount)
+            console.log(amount)
 
             // Покупаем валюту
             task = {
               type: 'sell',
               price: markupPrice,
               minPrice: markupPrice, // минимальная достигнутая цена
-              amount: amount,
+              amount: task.amount,
               repeat: 30
             }
 
@@ -169,6 +178,7 @@ order: ${buy.order_id}`)
             */
           } catch (e) {
             console.log('Error watch buy:')
+            console.log(task)
             console.log(e)
           }
         } else {
@@ -486,7 +496,8 @@ const observe = async () => {
           price: minPrice,
           minPrice: minPrice, // минимальная достигнутая цена
           amount: amount,
-          repeat: 30
+          repeat: 30,
+          bottom: 0 // если дно будет равно 1, то подтверждаем что это дно и покупаем
         }
 
         // Оповещаем об создании задания
