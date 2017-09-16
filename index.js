@@ -20,9 +20,6 @@ const candles = []
 // Задача
 let task = null
 
-// время жизни ордера
-const timeOrder = 300
-
 // Поиск в истории транзакций
 const findHistory = (tid) => {
   for (item of history) {
@@ -45,7 +42,8 @@ const lastTransaction = async () => {
     }
     return last
   } catch (e) {
-    console.log(`Error lastTrade: ${e}`)
+    //console.log(`Error lastTrade: ${e}`)
+    return {type: 'sell'}
   }
 }
 
@@ -96,13 +94,19 @@ const sale = async (rate, amount) => {
   }
 }
 
+// Вывод в консоль с текущим временем
+const consoleTime = (text) => {
+  const date = new Date()
+  console.log(`${date.getHours()}:${date.getMinutes()} — ${text}`)
+}
+
 // Ожидание дна
 const watch = async (transaction) => {
   if (!transaction || !task) return false
 
   // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
   if (!task.repeat) {
-    console.log('Сбросили задачу, цена поднялась!!!!!!!!!!!!')
+    consoleTime('Задача сброщена, цена повысилась')
     task = null
     return false
   }
@@ -119,24 +123,24 @@ const watch = async (transaction) => {
       if (((1 - (task.minPrice / transaction.price)) * 1000) >= 3) {
         if (((1 - (task.minPrice / transaction.price)) * 1000) >= 4) {
           task.repeat--
-          console.log(`Курс слишком высокий (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+          consoleTime(`Высокий [начало: ${task.price}, сейчас: ${transaction.price}, минимум: ${task.minPrice}]`)
           return false
         }
-        console.log(`Достигли дна, курс начинает подниматься (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+        consoleTime(`Дно [начало: ${task.price}, сейчас: ${transaction.price}, минимум: ${task.minPrice}]`)
 
         // Цена ниже установленного минимума
         if (transaction.price <= task.price) {
-          console.log(`Цена ниже установленного минимума (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+          consoleTime(`Рентабельно [начало: ${task.price}, сейчас: ${transaction.price}, минимум: ${task.minPrice}]`)
 
           // Повторно проверяем
           if (task.bottom !== 1) {
             task.bottom++
-            console.log('Пытаемся повторно проверить сумму')
+            consoleTime('Проверка суммы...')
             return false
           }
 
           try {
-            console.log(`ПОКУПАЕМ ${task.amount} по курсу: ${transaction.price}, минимум: ${task.minPrice}, установлено было: ${task.price}`)
+            consoleTime(`Инвестируем ${task.amount} [курс: ${transaction.price}, минимум: ${task.minPrice}, начало: ${task.price}]`)
             task = null
 
             // Минимальная цена продажи
@@ -186,11 +190,11 @@ order: ${buy.order_id}`)
 
           // Я думаю если она выросла не значительно, то можно брать...
           // Надо подумать, стоит ли брать
-          console.log(`Цена выросла по сравнению с устаовленным минимумом (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+          consoleTime(`Цена выросла [начало: ${task.price}, сейчас: ${transaction.price}, минимум: ${task.minPrice}]`)
         }
       } else {
         // Цена немного выросла, но не значительно, ждем дна
-        console.log(`Цена ${transaction.price} выросла по сравнению с дном ${task.minPrice} (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.minPrice})`)
+        consoleTime(`Цена растет, но незначительно [начало: ${task.price}, сейчас: ${transaction.price}, минимум: ${task.minPrice}]`)
       }
     }
   }
@@ -207,17 +211,17 @@ order: ${buy.order_id}`)
       if (((1 - (transaction.price / task.maxPrice)) * 1000) >= 3) {
         if (((1 - (transaction.price / task.maxPrice)) * 1000) >= 4) {
           task.repeat--
-          console.log(`Курс слишком сильно упал (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+          consoleTime(`Упал [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
           return false
         }
 
-        console.log(`Достигли максимума, курс начинает снижаться (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+        consoleTime(`Максимум, курс снижается [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
 
         // Цена выше установленного минимума
         if (transaction.price >= task.price) {
-          console.log(`Цена выше установленного минимума (установлено: ${task.price}, текущая цена: ${transaction.price}, самый максимум: ${task.maxPrice})`)
+          consoleTime(`Цена выше установленного минимума [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
           try {
-            console.log(`ПРОДАЕМ ${task.amount} по курсу: ${transaction.price}, максимум: ${task.maxPrice}, установлено было: ${task.price}`)
+            consoleTime(`Продаем ${task.amount} по курсу: ${transaction.price} [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
             task = null
             // Продаем валюту
             bot.sendMessage(config.user, `⌛ Выставляем на продужу на покупку ${task.amount} btc по курсу ${transaction.price}`)
@@ -231,11 +235,11 @@ order: ${buy.order_id}`)
 
           // Я думаю если она упала не значительно, то можно продовать...
           // Надо подумать, стоит ли продовать
-          console.log(`Цена упала по сравнению с устаовленным минимумом (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.maxPrice})`)
+          consoleTime(`Цена упала по сравнению с устаовленным минимумом [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
         }
       } else {
         // Цена немного упала, но не значительно, ждем пика
-        console.log(`Цена ${transaction.price} упала по сравнению с пиком ${task.maxPrice} (установлено: ${task.price}, текущая цена: ${transaction.price}, самый минимум: ${task.maxPrice})`)
+        console.log(`Цена ${transaction.price} упала по сравнению с пиком ${task.maxPrice} [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
       }
     }
   }
@@ -252,7 +256,7 @@ const orderCancelLimit = async (id, order) => {
   let currentTime = Math.floor(Date.now() / 1000)
 
   // Если срок жизни прошел, отменяем ордер
-  if (currentTime > (order.timestamp_created + timeOrder)) {
+  if (currentTime > (order.timestamp_created + config.timeOrder)) {
     try {
       // Отмена ордера
       await btce.cancelOrder(id)
@@ -504,8 +508,7 @@ const observe = async () => {
         bot.sendMessage(config.user, `👁 Запущено наблюдение для покупки \n объем: ${amount} \n минимальная цена: ${minPrice}`)
 
       } catch (e) {
-        console.log(`Buy error:`)
-        console.log(e)
+        console.log(`Buy error:`, e)
         bot.sendMessage(config.user, `Ошибка buy: ${e}`)
       }
     }
@@ -514,6 +517,8 @@ const observe = async () => {
   }
 }
 
+/** Старт наблюдения */
+consoleTime('Старт бота')
 // Формирование структурированных данных транзакций
 setTimeout(async () => {
   // Первая запуск загружает большой список данных
