@@ -1,12 +1,9 @@
 const config = require('./config')
 const BtceService = require('btc-e-v3')
-const TelegramBot = require('node-telegram-bot-api')
+const sendMessage = require('./telegram')
 
 // Инициализация соединения
 const btce = new BtceService({ publicKey: config.key, secretKey: config.secret })
-
-// Инициализация бота
-const bot = new TelegramBot(config.token, {polling: true})
 
 // Вся история движения
 const history = []
@@ -84,13 +81,13 @@ const sale = async (rate, amount) => {
     })
 
     // Оповещаем пользователя о выставлении на продажу
-    bot.sendMessage(config.user, `💰 Выставили на продажу ${amount} btc по курсу ${price}\n order: ${buy.order_id}`)
+    sendMessage(`💰 Выставили на продажу ${amount} btc по курсу ${price}\n order: ${buy.order_id}`)
 
   } catch (e) {
     console.log(`Error Buy: ${e}`)
     console.log(e)
 
-    bot.sendMessage(config.user, `Ошибка при продаже: ${e.error}`)
+    sendMessage(`Ошибка при продаже: ${e.error}`)
   }
 }
 
@@ -157,7 +154,7 @@ const watch = async (transaction) => {
               repeat: 30
             }
 
-            bot.sendMessage(config.user, `⌛ Запрос на покупку ${task.amount} btc по курсу ${transaction.price}`)
+            sendMessage(`⌛ Запрос на покупку ${task.amount} btc по курсу ${transaction.price}`)
             /*****************
             // let buy = await btce.trade({
             //   pair: config.pair,
@@ -170,7 +167,7 @@ const watch = async (transaction) => {
             let consumption = (task.amount * transaction.price).toFixed(3)
             let commission = getCommission(task.amount)
 
-            bot.sendMessage(config.user, `
+            sendMessage(`
 ⌛ Запрос на покупку ${task.amount} btc по курсу ${transaction.price}
 расход: $${consumption}
 получим: ${(task.amount - commission)} btc
@@ -224,7 +221,7 @@ order: ${buy.order_id}`)
             consoleTime(`Продаем ${task.amount} по курсу: ${transaction.price} [начало: ${task.price}, сейчас: ${transaction.price}, максимум: ${task.maxPrice}]`)
             task = null
             // Продаем валюту
-            bot.sendMessage(config.user, `⌛ Выставляем на продужу на покупку ${task.amount} btc по курсу ${transaction.price}`)
+            sendMessage(`⌛ Выставляем на продужу на покупку ${task.amount} btc по курсу ${transaction.price}`)
 
           } catch (e) {
             console.log('Error sell')
@@ -300,7 +297,7 @@ const observeOrders = async () => {
         let buyAmount = (order.start_amount - order.amount)
 
         // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `💰 Частично купили ${buyAmount} btc из ${order.start_amount} btc по курсу ${order.rate}\n order_id: ${id}`)
+        sendMessage(`💰 Частично купили ${buyAmount} btc из ${order.start_amount} btc по курсу ${order.rate}\n order_id: ${id}`)
 
         // очищаем задачу
         task = null
@@ -323,7 +320,7 @@ const observeOrders = async () => {
       if (order.type === 'buy') {
 
         // Оповещаем пользователя о купле
-        bot.sendMessage(config.user, `💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
+        sendMessage(`💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
 
         // очищаем задачу
         task = null
@@ -334,8 +331,7 @@ const observeOrders = async () => {
       } else {
 
         // Оповещаем о продаже
-        bot.sendMessage(config.user, `🎉 Продали ${config.amount} BTC по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}
-        `)
+        sendMessage(`🎉 Продали ${config.amount} BTC по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}`)
       }
 
       // Удаляем ордер из наблюдения
@@ -505,11 +501,11 @@ const observe = async () => {
         }
 
         // Оповещаем об создании задания
-        bot.sendMessage(config.user, `👁 Запущено наблюдение для покупки \n объем: ${amount} \n минимальная цена: ${minPrice}`)
+        sendMessage(`👁 Запущено наблюдение для покупки \n объем: ${amount} \n минимальная цена: ${minPrice}`)
 
       } catch (e) {
         console.log(`Buy error:`, e)
-        bot.sendMessage(config.user, `Ошибка buy: ${e}`)
+        sendMessage(`Ошибка buy: ${e}`)
       }
     }
   } catch (e) {
