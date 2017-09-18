@@ -158,6 +158,7 @@ const watch = async (transaction) => {
               type: 'sell',
               price: markupPrice,
               minPrice: markupPrice, // минимальная достигнутая цена
+              maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
               amount: task.amount,
               repeat: 30
             }
@@ -209,7 +210,7 @@ order: ${buy.order_id}`)
     const params = {
       'старт': task.price,
       'сейчас': transaction.price,
-      'максимум': task.maxPrice
+      'максимум': !task.maxPrice ? task.maxPrice : task.price
     }
 
     // Курс растет, ждем пика
