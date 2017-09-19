@@ -15,7 +15,14 @@ const orders = []
 const candles = []
 
 // Задача
-let task = null
+let task = {
+  type: 'sell',
+  price: 4500,
+  minPrice: 4500, // минимальная достигнутая цена
+  maxPrice: 4500, // максимальная, на данный момент это цена закупки
+  amount: 0.001,
+  repeat: 30
+}
 
 // Поиск в истории транзакций
 const findHistory = (tid) => {
@@ -255,6 +262,8 @@ order: ${buy.order_id}`)
       }
     }
   }
+  
+  console.log(task.type)
 
   // Выполняем тип в зависимости от задачи
   task.type === 'buy' ? buy() : sell()
