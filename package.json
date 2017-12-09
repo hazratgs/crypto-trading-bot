@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon",
     "start": "pm2 start index.js -l log.txt",
     "stop": "pm2 stop index.js"
   },
@@ -14,6 +15,8 @@
   },
   "dependencies": {
     "btc-e-v3": "^1.0.7",
+    "colors": "^1.1.2",
+    "moment": "^2.19.3",
     "mongoose": "^4.11.0",
     "node-telegram-bot-api": "^0.27.1"
   }

@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api')
-const config = require('./config')
+const config = require('../conf')
 
 let bot = null
 try {
