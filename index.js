@@ -352,7 +352,7 @@ class BTCTraderBot {
       const minPrice = parseFloat(((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3))
 
       // объем исходя из всей суммы
-      const amount = 10; // await this.buyAmount(minPrice)
+      const amount = 0.000567; // await this.buyAmount(minPrice)
 
       // Минимальная цена продажи
       const markupPrice = this.getMarkupPrice(minPrice)
