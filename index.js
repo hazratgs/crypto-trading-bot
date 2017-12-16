@@ -5,7 +5,7 @@ const colors = require('colors')
 const moment = require('moment') 
 
 class BTCTraderBot {
-  constructor() {
+  constructor () {
     // Инициализация соединения
     this.btce = new BtceService({ publicKey: config.key, secretKey: config.secret })
 
@@ -20,6 +20,9 @@ class BTCTraderBot {
 
     // Задача
     this.task = null
+
+    // Общий заработок
+    this.income = 0
   }
 
   init () {
@@ -31,14 +34,14 @@ class BTCTraderBot {
       await this.trades()
 
       // Теперь просто загружаем список постепенно
-      setInterval(this.trades, 1000)
+      setInterval(() => this.trades(), 1000)
     }, 1000)
 
-    // Наблюдение за ордерами
+    // Заносим активные ордеры в массив
     setInterval(() => this.observeActiveOrders(), 1000)
 
     // Наблюдение за ордерами
-    setInterval(() => this.observeOrders(), 5000)
+    setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
     setInterval(() => this.observe(), 60000)
@@ -46,7 +49,10 @@ class BTCTraderBot {
 
   // Поиск в истории транзакций
   findHistory (tid) {
-    return this.history.filter(item => item.tid === tid).length
+    for (let item of this.history) {
+      if (tid === item.tid) return true
+    }
+    return false
   }
 
   // Последняя транзакция
@@ -69,14 +75,14 @@ class BTCTraderBot {
 
   // Удаление ордера
   removeOrder (id) {
-    return this.orders.filter(item => item !== id)
-    // for (let key in this.orders) {
-    // 	if (orders[key] === id) {
-    // 		orders.splice(key, 1)
-    // 	}
-    // }
+    // return this.orders.filter(item => item !== id)
+    for (let key in this.orders) {
+    	if (this.orders[key] === id) {
+    		this.orders.splice(key, 1)
+    	}
+    }
   }
-
+  
   // Формирование цены продажи
   getMarkupPrice (rate) {
     return parseFloat(((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(3))
@@ -106,19 +112,14 @@ class BTCTraderBot {
         rate: price,
         amount: parseFloat((amount - this.getCommission(amount)).toFixed(8))
       })
-
-      // Оповещаем пользователя о выставлении на продажу
-      sendMessage(`💰 Выставили на продажу ${amount} btc по курсу ${price}\n order: ${buy.order_id}`)
-
     } catch (e) {
       this.console('Ошибка продажи', e.error)
-      sendMessage(`Ошибка продажи: ${e.error}`)
     }
   }
 
   // Вывод в консоль с текущим временем
   console (text, params = '') {
-    console.log(`${text} [${moment().format('LLL')}]`, params)
+    console.log(`${text}`, params, `[${moment().format('LLL')}]`)
   }
 
   // Отмена ордера по истичению 15 минут
@@ -173,11 +174,18 @@ class BTCTraderBot {
           // Оповещаем пользователя о купле
           sendMessage(`💰 Частично купили ${buyAmount} btc из ${order.start_amount} btc по курсу ${order.rate}\n order_id: ${id}`)
 
-          // очищаем задачу
-          this.task = null
+          // Формируем минимальную цену продажи
+          const markupPrice = this.getMarkupPrice(order.rate)
 
           // Выставляем частично купленный объем на продажу
-          await this.sale(order.rate, buyAmount)
+          this.task = {
+            type: 'sell',
+            price: markupPrice,
+            minPrice: markupPrice, // минимальная достигнутая цена
+            maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
+            amount: buyAmount
+          }
+          // await this.sale(order.rate, buyAmount)
 
           // Удаляем частично выполненный ордер
           this.removeOrder(id)
@@ -196,14 +204,20 @@ class BTCTraderBot {
           // Оповещаем пользователя о купле
           sendMessage(`💰 Купили ${order.start_amount} BTC по курсу ${order.rate}\n order_id: ${id}`)
 
-          // очищаем задачу
-          this.task = null
+          // Формируем минимальную цену продажи
+          const markupPrice = this.getMarkupPrice(order.rate)
 
           // Выставляем на продажу
-          await this.sale(parseFloat(order.rate.toFixed(3)), parseFloat(order.start_amount.toFixed(8)))
+          this.task = {
+            type: 'sell',
+            price: markupPrice,
+            minPrice: markupPrice, // минимальная достигнутая цена
+            maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
+            amount: order.start_amount
+          }
         } else {
           // Оповещаем о продаже
-          sendMessage(`🎉 Продали ${config.amount} BTC по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}`)
+          sendMessage(`🎉 Продали ${order.start_amount} BTC по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}`)
         }
 
         // Удаляем ордер из наблюдения
@@ -219,7 +233,6 @@ class BTCTraderBot {
   async observeActiveOrders () {
     try {
       // Получение списка активных ордеров
-      this.console('await this.btce.activeOrders(config.pair)', await this.btce.activeOrders(config.pair))
       const activeOrders = await this.btce.activeOrders(config.pair)
       for (let id in activeOrders) {
         if (!this.orders.filter(item => item === id).length) {
@@ -227,9 +240,9 @@ class BTCTraderBot {
         }
       }
     } catch (e) {
-      if (e.error !== 'no orders') {
-        this.console('Error observeActiveOrders')
-      }
+      // if (e.error !== 'no orders') {
+      //   this.console('Error observeActiveOrders')
+      // }
     }
   }
 
@@ -260,7 +273,7 @@ class BTCTraderBot {
         }
 
         // Отправляем данные в ожидание для покупки/продажи
-        if (this.history.length > 5000) {
+        if (this.history.length > 1000) {
           await this.watch(item)
         }
 
@@ -280,6 +293,7 @@ class BTCTraderBot {
         this.candles[0].amount += item.amount
       }
     } catch (e) {
+      console.log(e)
       if (e.toString() !== "TypeError: Cannot read property 'trades' of undefined") {
         this.console(`Error trades: ${e.error}`)
       }
@@ -288,8 +302,14 @@ class BTCTraderBot {
 
   // Наблюдение за последними свечами, для выявления покупки
   async observe () {
+    // Не выполняем наблюдение, если есть задача
+    if (this.task !== null) {
+      return null
+    }
+
     try {
       if (!this.candles.length || this.candles.length < 120) {
+        this.console('observe: недостаточное количество свеч'.bgRed.white, this.candles.length)
         return false
       }
 
@@ -298,6 +318,7 @@ class BTCTraderBot {
         await this.btce.activeOrders(config.pair)
 
         // Есть активный ордер, ожидаем завершения
+        this.console('observe: есть активный ордер')
         return false
       } catch (e) {
         // Не обрабатываем исключение
@@ -322,6 +343,7 @@ class BTCTraderBot {
       for (let item of data) {
         if (current.price.min > item.price.min) {
           // Не самая выгодная цена, сделка сорвана
+          this.console(`observe: не подходящий момент для инвестиции`, {current: current.price.min , min: item.price.min})
           return false
         }
       }
@@ -330,7 +352,7 @@ class BTCTraderBot {
       const minPrice = parseFloat(((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3))
 
       // объем исходя из всей суммы
-      const amount = await this.buyAmount(minPrice)
+      const amount = 10; // await this.buyAmount(minPrice)
 
       // Минимальная цена продажи
       const markupPrice = this.getMarkupPrice(minPrice)
@@ -385,72 +407,73 @@ class BTCTraderBot {
   async watch (transaction) {
     if (!transaction || !this.task) return false
 
-    // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
-    if (!this.task.repeat) {
-      this.console('Тайм-аут задачи'.bgRed.white)
-      this.task = null
-      return false
-    }
-
     // Покупка
     const buy = async () => {
+      // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
+      if (!this.task.repeat) {
+        this.console('Тайм-аут задачи'.bgRed.white)
+        this.task = null
+        return false
+      }
+      
       const params = {
         'наблюдение': this.task.price,
         'текущий': transaction.price,
         'минимум': this.task.minPrice
       }
+      this.console('buy', params)
 
       // Курс падает, ждем дна
-      if (transaction.price < this.task.minPrice) {
+      if (transaction.price <= this.task.minPrice) {
+        this.console('buy: курс падает', params)
         this.task.minPrice = transaction.price
       } else {
 
         // Если цена последней транзакции выросла
         // по сравнению с минимальной ценой, а так же все еще ниже часового минимума
-        if (((1 - (this.task.minPrice / transaction.price)) * 1000) >= 3) {
-          if (((1 - (this.task.minPrice / transaction.price)) * 1000) >= 4) {
+        if (((1 - (this.task.minPrice / transaction.price)) * 1000) >= 2) {
+          if (((1 - (this.task.minPrice / transaction.price)) * 1000) >= 3) {
             this.task.repeat--
-            this.console(`Высокий`.red, params)
+            this.console(`buy: высокий`.red, params)
             return false
           }
-          this.console(`Дно`.gray, params)
+          this.console(`buy: дно`.gray, params)
 
           // Цена ниже установленного минимума
           if (transaction.price <= this.task.price) {
-            this.console(`Рентабельно`.yellow, params)
+            this.console(`buy: рентабельно`.yellow, params)
 
             // Повторно проверяем
             if (this.task.bottom !== 1) {
               this.task.bottom++
-              this.console('Проверка суммы...'.underline)
+              this.console('buy: проверка суммы...'.underline)
               return false
             }
 
             try {
-              this.console(`Инвестируем ${this.task.amount} по курсу $${transaction.price}`.bgGreen.white, params)
+              this.console(`buy: инвестируем ${this.task.amount} по курсу $${transaction.price}`.bgGreen.white, params)
 
               // Минимальная цена продажи
-              const markupPrice = this.getMarkupPrice(transaction.price)
-              const amount = this.getCommission(this.task.amount)
+              // const markupPrice = this.getMarkupPrice(transaction.price)
+              // const amount = this.getCommission(this.task.amount)
 
               // Покупаем валюту
-              this.task = {
-                type: 'sell',
-                price: markupPrice,
-                minPrice: markupPrice, // минимальная достигнутая цена
-                maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-                amount: this.task.amount,
-                repeat: 30
-              }
+              // this.task = {
+              //   type: 'sell',
+              //   price: markupPrice,
+              //   minPrice: markupPrice, // минимальная достигнутая цена
+              //   maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
+              //   amount: this.task.amount,
+              //   repeat: 30
+              // }
 
-              // sendMessage(`⌛ Запрос на покупку ${this.task.amount} btc по курсу ${transaction.price}`)
-
-              // let buy = await btce.trade({
-              //   pair: config.pair,
-              //   type: 'buy',
-              //   rate: transaction.price,
-              //   amount: task.amount // с учетом коммисии
-              // })
+              // Отправляем заявку на покупку
+              let buy = await btce.trade({
+                pair: config.pair,
+                type: 'buy',
+                rate: transaction.price,
+                amount: this.task.amount // с учетом коммисии
+              })
 
               // Оповещаем об покупке
               // const consumption = (this.task.amount * transaction.price).toFixed(3)
@@ -492,31 +515,39 @@ class BTCTraderBot {
         'максимум': !this.task.maxPrice ? this.task.maxPrice : this.task.price
       }
 
+      // Текущая цена ниже установленного минимума
+      if (transaction.price < this.task.price) {
+        this.console(`sell: курс ${transaction.price} ниже установленного минимума ${this.task.price}`)
+        return false
+      }
+
       // Курс растет, ждем пика
       if (transaction.price > this.task.maxPrice) {
         this.task.maxPrice = transaction.price
+        this.console('sell: курс растет')
       } else {
 
         // Если цена последней транзакции снизилась
         // по сравнению с максимальной ценой, а так же все еще выше часового минимума
         if (((1 - (transaction.price / this.task.maxPrice)) * 1000) >= 3) {
-          if (((1 - (transaction.price / this.task.maxPrice)) * 1000) >= 4) {
-            this.task.repeat--
-            this.console(`Упал`, params)
-            return false
-          }
-
-          this.console(`Максимум, курс снижается`, params)
+          this.console(`sell: максимум, курс снижается`, params)
 
           // Цена выше установленного минимума
           if (transaction.price >= this.task.price) {
-            this.console(`Цена выше установленного минимума`, params)
+            this.console(`sell: цена выше установленного минимума`, params)
             try {
-              this.console(`Продаем ${this.task.amount} по курсу: ${transaction.price}`, params)
-              this.task = null
-              // Продаем валюту
-              sendMessage(`⌛ Выставляем на продужу на покупку ${this.task.amount} btc по курсу ${transaction.price}`)
+              this.console(`sell: продаем ${this.task.amount} по курсу: ${transaction.price}`, params)
 
+              // Обнуляем задачу
+              this.task = null
+
+              // Отправляем заявку на продажу
+              let sell = await btce.trade({
+                pair: config.pair,
+                type: 'sell',
+                rate: transaction.price,
+                amount: this.task.amount // с учетом коммисии
+              })
             } catch (e) {
               this.console('Error sell', e.error)
             }
@@ -525,11 +556,11 @@ class BTCTraderBot {
 
             // Я думаю если она упала не значительно, то можно продовать...
             // Надо подумать, стоит ли продовать
-            this.console(`Цена упала по сравнению с устаовленным минимумом [начало: ${this.task.price}, сейчас: ${transaction.price}, максимум: ${this.task.maxPrice}]`)
+            this.console(`sell: цена упала по сравнению с устаовленным минимумом [начало: ${this.task.price}, сейчас: ${transaction.price}, максимум: ${this.task.maxPrice}]`)
           }
         } else {
           // Цена немного упала, но не значительно, ждем пика
-          this.console(`Цена ${transaction.price} упала по сравнению с пиком ${this.task.maxPrice}`, params)
+          this.console(`sell: цена ${transaction.price} упала по сравнению с пиком ${this.task.maxPrice}`, params)
         }
       }
     }
