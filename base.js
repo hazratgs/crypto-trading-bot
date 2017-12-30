@@ -4,9 +4,15 @@ const colors = require('colors')
 const moment = require('moment')
 
 class Base {
-  constructor (pair) {
+  constructor ({ pair, percentWallet = 100 } = {}) {
+    // Конфигурационные данные
     this.config = config
+
+    // Пара
     this.pair = pair
+
+    // Какой процент кошелька использовать
+    this.percentWallet = percentWallet
 
     // Активные ордеры
     this.orders = []

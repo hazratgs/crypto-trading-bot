@@ -3,20 +3,20 @@ const BtceService = require('btc-e-v3')
 const Pusher = require('pusher-js')
 
 class Wex extends Base {
-  constructor (pair) {
-    super(pair)
+  constructor(option) {
+    super(option)
 
     // Инициализация соединения
     this.btce = new BtceService({
-        publicKey: this.config.api.wex.key, 
-        secretKey: this.config.api.wex.secret
+      publicKey: this.config.api.wex.key,
+      secretKey: this.config.api.wex.secret
     })
 
     this.socket = new Pusher('ee987526a24ba107824c', { cluster: 'eu' })
     this.channel = this.socket.subscribe(`${this.pair}.trades`)
   }
 
-  init () {
+  init() {
     this.console(`run wex ${this.pair}`.green)
 
     // Формирование структурированных данных транзакций
@@ -39,7 +39,7 @@ class Wex extends Base {
   }
 
   // Последняя транзакция
-  async lastTransaction () {
+  async lastTransaction() {
     try {
       // Последняя транзакция
       const trandeHistory = await this.btce.tradeHistory({ from: 0, count: 1 })
@@ -57,20 +57,25 @@ class Wex extends Base {
   }
 
   // Получаем объем исходя из курса и суммы денег
-  async buyAmount (rate) {
+  async buyAmount(rate) {
     try {
       const info = await this.btce.getInfo()
       const [, wallet] = this.pair.split('_')
+
+      // Общий объем валюты
       const amount = info.funds[wallet]
 
-      return parseFloat((info.funds.usd / rate).toFixed(8))
+      // Доступно для использования
+      const available = ((amount / 100) * this.percentWallet)
+
+      return parseFloat((available / rate).toFixed(8))
     } catch (e) {
       console.log('Error buyAmount', e)
     }
   }
 
   // Выставление на продажу
-  async sale (rate, amount) {
+  async sale(rate, amount) {
     try {
       // Цена продажи
       let price = this.getMarkupPrice(rate)
@@ -88,7 +93,7 @@ class Wex extends Base {
   }
 
   // Отмена ордера по истичению 15 минут
-  async orderCancelLimit (id, order) {
+  async orderCancelLimit(id, order) {
     // Если ордер выполнен, пропускам проверку
     if (order.status === 1) return false
 
@@ -116,7 +121,7 @@ class Wex extends Base {
   }
 
   // Наблюдение за ордерами
-  async observeOrders () {
+  async observeOrders() {
     this.orders.map(async id => {
       try {
         const info = await this.btce.orderInfo(id)
@@ -194,7 +199,7 @@ class Wex extends Base {
   }
 
   // Наблюдение за активными ордерами
-  async observeActiveOrders () {
+  async observeActiveOrders() {
     try {
       // Получение списка активных ордеров
       const activeOrders = await this.btce.activeOrders(this.pair)
@@ -211,13 +216,13 @@ class Wex extends Base {
   }
 
   // Формирование структурированных данных в реальном времени
-  trades () {
+  trades() {
     this.channel.bind('trades', async item => await this.addElementCandles(item[0]))
   }
 
   // Формирование структурированных данных купли/продажи
-  async firstLoadTrades () {
-    try {      
+  async firstLoadTrades() {
+    try {
       const trades = await this.btce.trades(this.pair, 5000)
       for (let item of trades[this.pair].reverse()) {
         await this.addElementCandles([item.type, item.price, item.amount], item.timestamp * 1000, false)
@@ -228,7 +233,7 @@ class Wex extends Base {
   }
 
   // Наблюдение за последними свечами, для выявления покупки
-  async observe () {
+  async observe() {
     // Не выполняем наблюдение, если есть задача
     if (this.task !== null) {
       return null
@@ -270,7 +275,7 @@ class Wex extends Base {
       for (let item of data) {
         if (current.price.min > item.price.min) {
           // Не самая выгодная цена, сделка сорвана
-          this.console(`observe: не подходящий момент для инвестиции`, {current: current.price.min , min: item.price.min})
+          this.console(`observe: не подходящий момент для инвестиции`, { current: current.price.min, min: item.price.min })
           return false
         }
       }
@@ -331,7 +336,7 @@ class Wex extends Base {
   }
 
   // Ожидание дна
-  async watch (transaction) {
+  async watch(transaction) {
     if (!transaction || !this.task) return false
 
     // Покупка
@@ -342,7 +347,7 @@ class Wex extends Base {
         this.task = null
         return false
       }
-      
+
       const params = {
         'наблюдение': this.task.price,
         'текущий': transaction,
