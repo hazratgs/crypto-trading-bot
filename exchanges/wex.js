@@ -385,7 +385,7 @@ class Wex extends Base {
               this.console(`buy: инвестируем ${this.task.amount} по курсу $${transaction}`.bgGreen.white, params)
 
               // Отправляем заявку на покупку
-              let buy = await btce.trade({
+              await this.btce.trade({
                 pair: this.pair,
                 type: 'buy',
                 rate: transaction,
@@ -396,7 +396,7 @@ class Wex extends Base {
               this.task = null
 
             } catch (e) {
-              this.console('Error watch buy:', e.error, this.task)
+              this.console('Error watch buy:', e, this.task)
             }
           } else {
             // Цена выросла по сравнению с установленным минимумом...
@@ -447,14 +447,14 @@ class Wex extends Base {
               this.task = null
 
               // Отправляем заявку на продажу
-              let sell = await btce.trade({
+              let sell = await this.btce.trade({
                 pair: this.pair,
                 type: 'sell',
                 rate: transaction,
                 amount: this.task.amount // с учетом коммисии
               })
             } catch (e) {
-              this.console('Error sell', e.error)
+              this.console('Error sell', e)
             }
           } else {
             // Цена упала по сравнению с установленным минимумом...
