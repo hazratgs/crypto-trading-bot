@@ -18,7 +18,7 @@ class Wex extends Base {
 
   init() {
     this.console(`run wex ${this.pair}`.green)
-    this.lastTransaction()
+
     // Формирование структурированных данных транзакций
     setTimeout(async () => {
       // Первая запуск загружает большой список данных
