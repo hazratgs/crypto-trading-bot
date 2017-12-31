@@ -265,7 +265,7 @@ class Wex extends Base {
 
       // Последняя транзакция
       const lastTrade = await this.lastTransaction()
-      console.log(lastTrade)
+      
       // Ожидаем, что последняя транзакция, это продажа
       if (lastTrade.type === 'buy' || this.task !== null) {
         return false
@@ -280,8 +280,8 @@ class Wex extends Base {
         }
       }
 
-      // Курс по которому мы купим btc
-      const minPrice = parseFloat(((current.price.min * (0.05 / 100)) + current.price.min).toFixed(3))
+      // Курс по которому мы купим
+      const minPrice = parseFloat(((current.price.min * (0.02 / 100)) + current.price.min).toFixed(3))
 
       // объем исходя из всей суммы
       const amount = await this.buyAmount(minPrice)
@@ -331,7 +331,7 @@ class Wex extends Base {
         }
       }
     } catch (e) {
-      this.console(`Error observe: ${e.error}`)
+      this.console(`Error observe: ${e.error}`, e)
     }
   }
 

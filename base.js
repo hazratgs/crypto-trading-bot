@@ -66,6 +66,9 @@ class Base {
 
   // Добавить новую свечу или вставить в текущую
   async addElementCandles (item, timestamp = Date.now(), watch = true) {
+    // Преобразовываем в число
+    item[1] = parseFloat(item[1])
+    
     const [type, price, amount] = item
     const date = new Date(timestamp)
 
