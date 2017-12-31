@@ -18,7 +18,7 @@ class Wex extends Base {
 
   init() {
     this.console(`run wex ${this.pair}`.green)
-
+    this.lastTransaction()
     // Формирование структурированных данных транзакций
     setTimeout(async () => {
       // Первая запуск загружает большой список данных
@@ -42,7 +42,7 @@ class Wex extends Base {
   async lastTransaction() {
     try {
       // Последняя транзакция
-      const trandeHistory = await this.btce.tradeHistory({ from: 0, count: 1 })
+      const trandeHistory = await this.btce.tradeHistory({ from: 0, count: 1, pair: this.pair })
       let last = null
       for (let item in trandeHistory) {
         if (!last) {
@@ -265,7 +265,7 @@ class Wex extends Base {
 
       // Последняя транзакция
       const lastTrade = await this.lastTransaction()
-
+      console.log(lastTrade)
       // Ожидаем, что последняя транзакция, это продажа
       if (lastTrade.type === 'buy' || this.task !== null) {
         return false
