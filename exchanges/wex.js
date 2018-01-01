@@ -142,7 +142,7 @@ class Wex extends Base {
           const buyAmount = (order.start_amount - order.amount)
 
           // Оповещаем пользователя о купле
-          this.sendMessage(`💰 Частично купили ${buyAmount} из ${order.start_amount} по курсу ${order.rate}\n order_id: ${id}`)
+          this.sendMessage(`💰 Частично купили ${buyAmount} ${this.pair} из ${order.start_amount} по курсу ${order.rate}\n order_id: ${id}`)
 
           // Формируем минимальную цену продажи
           const markupPrice = this.getMarkupPrice(order.rate)
@@ -171,7 +171,7 @@ class Wex extends Base {
         if (order.type === 'buy') {
 
           // Оповещаем пользователя о купле
-          this.sendMessage(`💰 Купили ${order.start_amount} по курсу ${order.rate}\n order_id: ${id}`)
+          this.sendMessage(`💰 Купили ${order.start_amount} ${this.pair} по курсу ${order.rate}\n order_id: ${id}`)
 
           // Формируем минимальную цену продажи
           const markupPrice = this.getMarkupPrice(order.rate)
@@ -186,7 +186,7 @@ class Wex extends Base {
           }
         } else {
           // Оповещаем о продаже
-          this.sendMessage(`🎉 Продали ${order.start_amount} по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}`)
+          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.rate}\nнаценка: ${order.markup}%\norder: ${id}`)
         }
 
         // Удаляем ордер из наблюдения
@@ -395,7 +395,7 @@ class Wex extends Base {
             }
 
             try {
-              this.console(`buy: инвестируем ${this.task.amount} по курсу $${transaction}`.bgGreen.white, params)
+              this.console(`buy: инвестируем ${this.pair} ${this.task.amount} по курсу $${transaction}`.bgGreen.white, params)
 
                // Объем покупки
                const amount = parseFloat(this.task.amount).toFixed(8)
@@ -457,7 +457,7 @@ class Wex extends Base {
           if (transaction >= this.task.price) {
             this.console(`sell: цена выше установленного минимума`, params)
             try {
-              this.console(`sell: продаем ${this.task.amount} по курсу: ${transaction}`, params) 
+              this.console(`sell: продаем ${this.pair} ${this.task.amount} по курсу: ${transaction}`, params) 
 
               // Объем продажи
               const amount = parseFloat(this.task.amount).toFixed(8)
