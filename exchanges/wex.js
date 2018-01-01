@@ -268,6 +268,19 @@ class Wex extends Base {
       
       // Ожидаем, что последняя транзакция, это продажа
       if (lastTrade.type === 'buy' || this.task !== null) {
+        // Восстанавливаем процесс продажи после остановки бота
+
+        // Минимальная сумма продажи
+        const minSellPrice = this.getMarkupPrice(lastTrade.rate)
+
+        // Выставляем на продажу не отловленную покупку
+        this.task = {
+          type: 'sell',
+          price: minSellPrice,
+          minPrice: minSellPrice, // минимальная достигнутая цена
+          maxPrice: minSellPrice, // максимальная, на данный момент это цена закупки
+          amount: lastTrade.amount - this.getCommission(lastTrade.amount) // Цена продажи с вычетом коммиссии
+        }
         return false
       }
 

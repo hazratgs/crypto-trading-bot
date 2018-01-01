@@ -4,12 +4,18 @@ const colors = require('colors')
 const moment = require('moment')
 
 class Base {
-  constructor ({ pair, percentWallet = 100 } = {}) {
+  constructor ({ pair, percentWallet = 100, commission = 0.2, markup = 1 } = {}) {
     // Конфигурационные данные
     this.config = config
 
     // Пара
     this.pair = pair
+
+    // Коммисия за 1 операцию
+    this.commission = commission
+
+    // Наша накидка
+    this.markup = markup
 
     // Какой процент кошелька использовать
     this.percentWallet = percentWallet
@@ -51,12 +57,12 @@ class Base {
 
   // Формирование цены продажи
   getMarkupPrice (rate) {
-    return parseFloat(((rate * ((config.markup + config.commission) / 100)) + rate).toFixed(3))
+    return parseFloat(((rate * ((this.markup + (this.commission * 2)) / 100)) + rate).toFixed(3))
   }
 
   // Получаем коммисию
   getCommission (amount) {
-    return parseFloat((amount - (amount * (1 - (config.commission / 100)))).toFixed(8))
+    return parseFloat((amount - (amount * (1 - (this.commission / 100)))).toFixed(8))
   }
 
   // Обертка над sendMessage
