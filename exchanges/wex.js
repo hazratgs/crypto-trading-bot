@@ -441,18 +441,19 @@ class Wex extends Base {
           if (transaction >= this.task.price) {
             this.console(`sell: цена выше установленного минимума`, params)
             try {
-              this.console(`sell: продаем ${this.task.amount} по курсу: ${transaction}`, params)
-
-              // Обнуляем задачу
-              this.task = null
+              this.console(`sell: продаем ${this.task.amount} по курсу: ${transaction}`, params) 
 
               // Отправляем заявку на продажу
-              let sell = await this.btce.trade({
+              await this.btce.trade({
                 pair: this.pair,
                 type: 'sell',
                 rate: transaction,
                 amount: this.task.amount // с учетом коммисии
               })
+
+              // Обнуляем задачу
+              this.task = null
+
             } catch (e) {
               this.console('Error sell', e)
             }
