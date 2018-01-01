@@ -397,12 +397,15 @@ class Wex extends Base {
             try {
               this.console(`buy: инвестируем ${this.task.amount} по курсу $${transaction}`.bgGreen.white, params)
 
+               // Объем покупки
+               const amount = parseFloat(this.task.amount).toFixed(8)
+
               // Отправляем заявку на покупку
               await this.btce.trade({
                 pair: this.pair,
                 type: 'buy',
                 rate: transaction,
-                amount: this.task.amount // с учетом коммисии
+                amount: amount // с учетом коммисии
               })
 
               // Обнуляем задачу
@@ -456,12 +459,15 @@ class Wex extends Base {
             try {
               this.console(`sell: продаем ${this.task.amount} по курсу: ${transaction}`, params) 
 
+              // Объем продажи
+              const amount = parseFloat(this.task.amount).toFixed(8)
+
               // Отправляем заявку на продажу
               await this.btce.trade({
                 pair: this.pair,
                 type: 'sell',
                 rate: transaction,
-                amount: this.task.amount // с учетом коммисии
+                amount: amount // с учетом коммисии
               })
 
               // Обнуляем задачу
