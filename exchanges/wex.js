@@ -153,7 +153,7 @@ class Wex extends Base {
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: buyAmount
+            amount: buyAmount - this.getCommission(buyAmount)
           }
 
           // Удаляем частично выполненный ордер
@@ -182,7 +182,7 @@ class Wex extends Base {
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: order.start_amount
+            amount: order.start_amount - this.getCommission(order.start_amount)
           }
         } else {
           // Оповещаем о продаже
