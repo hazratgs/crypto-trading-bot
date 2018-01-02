@@ -4,7 +4,7 @@ const colors = require('colors')
 const moment = require('moment')
 
 class Base {
-  constructor ({ pair, percentWallet = 100, commission = 0.2, markup = 1 } = {}) {
+  constructor ({ pair, percentWallet, commission = 0.2, markup = 1 } = {}) {
     // Конфигурационные данные
     this.config = config
 

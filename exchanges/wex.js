@@ -56,19 +56,49 @@ class Wex extends Base {
     }
   }
 
+  // Получить данные кошельков
+  async getWallets () {
+    try {
+      const info = await this.btce.getInfo()
+      return info.funds
+
+    } catch (e) {
+      this.console('Error getWallets', e.error)
+    }
+  }
+
+  // Получаем объем для продажи
+  async getSellAmount () {
+    const wallets = await this.getWallets()
+    const [wallet] = this.pair.split('_')
+    return wallets[wallet]
+  }
+
   // Получаем объем исходя из курса и суммы денег
   async buyAmount(rate) {
     try {
-      const info = await this.btce.getInfo()
+      const wallets = await this.getWallets()
       const [, wallet] = this.pair.split('_')
+      const distribution = []
+      
+      // Находим пустые кошельки
+      for (let key in wallets) {
+        if (this.percentWallet.includes(key) && wallets[key] === 0) {
+          distribution.push({
+            wallet: key,
+            value: wallets[key]
+          })
+        }
+      }
 
-      // Общий объем валюты
-      const amount = info.funds[wallet]
-
-      // Доступно для использования
-      const available = ((amount / 100) * this.percentWallet)
-
-      return parseFloat((available / rate).toFixed(8))
+      // Если всего 1 кошелек пустой, отдаем всю сумму
+      if (distribution.length === 1) {
+        // Доступно для использования
+        return parseFloat((wallets[wallet] / rate).toFixed(8))
+      } else {
+        // Разделяем на части
+        return parseFloat(((wallets[wallet] / distribution.length) / rate).toFixed(8))
+      }
     } catch (e) {
       console.log('Error buyAmount', e)
     }
@@ -139,10 +169,10 @@ class Wex extends Base {
           this.console('Ордер на половину выполнен:', order)
 
           // Объем, который мы купили
-          const buyAmount = (order.start_amount - order.amount)
+          const amount = await this.getSellAmount()
 
           // Оповещаем пользователя о купле
-          this.sendMessage(`💰 Частично купили ${buyAmount} ${this.pair} из ${order.start_amount} по курсу ${order.rate}\n order_id: ${id}`)
+          this.sendMessage(`💰 Частично купили ${amount} ${this.pair} из ${order.start_amount} по курсу ${order.rate}\n order_id: ${id}`)
 
           // Формируем минимальную цену продажи
           const markupPrice = this.getMarkupPrice(order.rate)
@@ -153,7 +183,7 @@ class Wex extends Base {
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: buyAmount - this.getCommission(buyAmount)
+            amount: amount
           }
 
           // Удаляем частично выполненный ордер
@@ -176,13 +206,16 @@ class Wex extends Base {
           // Формируем минимальную цену продажи
           const markupPrice = this.getMarkupPrice(order.rate)
 
+          // Объем, который мы купили
+          const amount = await this.getSellAmount()
+
           // Выставляем на продажу
           this.task = {
             type: 'sell',
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: order.start_amount - this.getCommission(order.start_amount)
+            amount: amount
           }
         } else {
           // Оповещаем о продаже
@@ -273,13 +306,16 @@ class Wex extends Base {
         // Минимальная сумма продажи
         const minSellPrice = this.getMarkupPrice(lastTrade.rate)
 
+        // Объем для продажи
+        const amount = await this.getSellAmount()
+
         // Выставляем на продажу не отловленную покупку
         this.task = {
           type: 'sell',
           price: minSellPrice,
           minPrice: minSellPrice, // минимальная достигнутая цена
           maxPrice: minSellPrice, // максимальная, на данный момент это цена закупки
-          amount: lastTrade.amount - this.getCommission(lastTrade.amount) // Цена продажи с вычетом коммиссии
+          amount: amount // Цена продажи с вычетом коммиссии
         }
         return false
       }
