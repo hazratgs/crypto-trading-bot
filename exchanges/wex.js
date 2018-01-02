@@ -8,8 +8,8 @@ class Wex extends Base {
 
     // Инициализация соединения
     this.btce = new BtceService({
-      publicKey: this.config.api.wex.key,
-      secretKey: this.config.api.wex.secret
+      publicKey: this.api.key,
+      secretKey: this.api.secret
     })
 
     this.socket = new Pusher('ee987526a24ba107824c', { cluster: 'eu' })
