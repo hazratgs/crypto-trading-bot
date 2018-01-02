@@ -274,7 +274,7 @@ class Wex extends Base {
 
     try {
       if (!this.candles.length || this.candles.length < 120) {
-        this.console('observe: недостаточное количество свеч'.bgRed.white, this.candles.length)
+        this.console(`observe: недостаточное количество свеч ${this.pair}`.bgRed.white, this.candles.length)
         return false
       }
 
@@ -283,7 +283,7 @@ class Wex extends Base {
         await this.btce.activeOrders(this.pair)
 
         // Есть активный ордер, ожидаем завершения
-        this.console('observe: есть активный ордер')
+        this.console(`observe: есть активный ордер ${this.pair}`)
         return false
       } catch (e) {
         // Не обрабатываем исключение
@@ -364,7 +364,7 @@ class Wex extends Base {
       if (resolution) {
         // Покупаем
         try {
-          this.console(`👁 Запущено наблюдение, объем: ${amount}, цена: ${minPrice}`.yellow.underline)
+          this.console(`👁 Запущено наблюдение, объем: ${amount} ${this.pair}, цена: ${minPrice}`.yellow.underline)
 
           // Добавляем задачу
           this.task = {
@@ -392,7 +392,7 @@ class Wex extends Base {
     const buy = async () => {
       // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
       if (!this.task.repeat) {
-        this.console('Тайм-аут задачи'.bgRed.white)
+        this.console(`Тайм-аут задачи ${this.pair}`.bgRed.white)
         this.task = null
         return false
       }
@@ -405,7 +405,7 @@ class Wex extends Base {
 
       // Курс падает, ждем дна
       if (transaction <= this.task.minPrice) {
-        this.console('buy: курс падает', params)
+        this.console(`buy: курс падает ${this.pair}`, params)
         this.task.minPrice = transaction
       } else {
 
@@ -414,14 +414,14 @@ class Wex extends Base {
         if (((1 - (this.task.minPrice / transaction)) * 1000) >= 2) {
           if (((1 - (this.task.minPrice / transaction)) * 1000) >= 4) {
             this.task.repeat--
-            this.console(`buy: высокий`.red, params)
+            this.console(`buy: высокий ${this.pair}`.red, params)
             return false
           }
-          this.console(`buy: дно`.gray, params)
+          this.console(`buy: дно ${this.pair}`.gray, params)
 
           // Цена ниже установленного минимума
           if (transaction <= this.task.price) {
-            this.console(`buy: рентабельно`.yellow, params)
+            this.console(`buy: рентабельно ${this.pair}`.yellow, params)
 
             // Повторно проверяем
             if (this.task.bottom !== 1) {
@@ -455,11 +455,11 @@ class Wex extends Base {
 
             // Я думаю если она выросла не значительно, то можно брать...
             // Надо подумать, стоит ли брать
-            this.console(`Цена выросла по сравнению с минимумом`, params)
+            this.console(`Цена выросла по сравнению с минимумом ${this.pair}`, params)
           }
         } else {
           // Цена немного выросла, но не значительно, ждем дна
-          this.console(`Цена растет, но незначительно`, params)
+          this.console(`Цена растет, но незначительно ${this.pair}`, params)
         }
       }
     }
@@ -474,7 +474,7 @@ class Wex extends Base {
 
       // Текущая цена ниже установленного минимума
       if (transaction < this.task.price) {
-        this.console(`sell: курс ${transaction} ниже установленного минимума ${this.task.price}`)
+        this.console(`sell: курс ${transaction} ${this.pair} ниже установленного минимума ${this.task.price}`)
         return false
       }
 
@@ -487,11 +487,11 @@ class Wex extends Base {
         // Если цена последней транзакции снизилась
         // по сравнению с максимальной ценой, а так же все еще выше часового минимума
         if (((1 - (transaction / this.task.maxPrice)) * 1000) >= 3) {
-          this.console(`sell: максимум, курс снижается`, params)
+          this.console(`sell: максимум, курс снижается ${this.pair}`, params)
 
           // Цена выше установленного минимума
           if (transaction >= this.task.price) {
-            this.console(`sell: цена выше установленного минимума`, params)
+            this.console(`sell: цена выше установленного минимума ${this.pair}`, params)
             try {
               this.console(`sell: продаем ${this.pair} ${this.task.amount} по курсу: ${transaction}`, params) 
 
@@ -517,11 +517,11 @@ class Wex extends Base {
 
             // Я думаю если она упала не значительно, то можно продовать...
             // Надо подумать, стоит ли продовать
-            this.console(`sell: цена упала по сравнению с устаовленным минимумом [начало: ${this.task.price}, сейчас: ${transaction}, максимум: ${this.task.maxPrice}]`)
+            this.console(`sell: цена упала по сравнению с устаовленным минимумом ${this.pair} [начало: ${this.task.price}, сейчас: ${transaction}, максимум: ${this.task.maxPrice}]`)
           }
         } else {
           // Цена немного упала, но не значительно, ждем пика
-          this.console(`sell: цена ${transaction} упала по сравнению с пиком ${this.task.maxPrice}`, params)
+          this.console(`sell: цена ${transaction} ${this.pair} упала по сравнению с пиком ${this.task.maxPrice}`, params)
         }
       }
     }
