@@ -243,7 +243,7 @@ class Wex extends Base {
       }
     } catch (e) {
       if (e.error !== 'no orders') {
-        this.console('Error observeActiveOrders', e)
+        this.console('Error observeActiveOrders', e.error)
       }
     }
   }
