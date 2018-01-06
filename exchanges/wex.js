@@ -77,6 +77,21 @@ class Wex extends Base {
     return data
   }
 
+  // История сделок
+  async getHistory () {
+    try {
+      const history = await this.btce.tradeHistory({ count: 20, order: 'DESC' })
+      const data = []
+
+      for (let item in history) {
+        data.push(history[item])
+      }
+      return data
+    } catch (e) {
+      console.log('Error getHistory', e.error)
+    }
+  }
+
   // Получаем объем для продажи
   async getSellAmount () {
     const wallets = await this.getWallets()
@@ -241,20 +256,19 @@ class Wex extends Base {
 
           // Прибавляем заработок
           this.income += income
-          
-          // Оповещаем о продаже
-          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.rate} \norder: ${id}`)
-
 
           // Очищаем задачу
           this.task = null
+          
+          // Оповещаем о продаже
+          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.rate} \norder: ${id}`)
         }
 
         // Удаляем ордер из наблюдения
         this.removeOrder(id)
 
       } catch (e) {
-        this.console('Error observeOrders:', e.error)
+        this.console('Error observeOrders:', e)
       }
     })
   }

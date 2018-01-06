@@ -9,7 +9,7 @@ class Telegram {
     this.user = config.user
 
     // Кнопки
-    this.buttons = ['⛏ Активные задачи', '💰 Заработок', '💵 Баланс']
+    this.buttons = ['⛏ Активные задачи', '💰 Заработок', '💵 Баланс', '📄 История сделок']
 
     // Отправка кнопок
     this.keyboard('Бот запущен', this.buttons)
@@ -37,6 +37,9 @@ class Telegram {
 
         case '💵 Баланс':
           return this.balance()
+
+        case '📄 История сделок':
+          return this.history()
       }
     })
   }
@@ -103,6 +106,27 @@ class Telegram {
       const wallets = await balance[item].getBalance()
       message += `${item}\n${wallets.map(item => `${item.type}: ${item.value}`).join('\n')}\n\n`
     }
+    this.keyboard(message, this.buttons)
+  }
+
+  // История сделок
+  async history () {
+    const accounts = this.apps.reduce((prev, current) => !prev 
+      ? ({ [current.purse]: current }) 
+      : ({ ...prev, [current.purse]: current }), {}
+    )
+
+    let message = `История сделок:`
+    for (let item in accounts) {
+      const history = await accounts[item].getHistory()
+      message += '\n\n' + accounts[item].login + '\n\n' + history.map(item => 
+        `Тип: ${item.type}
+Пара: ${item.pair}
+Объем: ${item.amount}
+Цена: ${item.rate}
+Время: ${moment(item.timestamp * 1000).subtract(1, 'hours').calendar()}`).join('\n• • • • • •\n')
+    }
+
     this.keyboard(message, this.buttons)
   }
 
