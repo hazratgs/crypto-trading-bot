@@ -180,10 +180,14 @@ class Wex extends Base {
           // Выставляем частично купленный объем на продажу
           this.task = {
             type: 'sell',
+            buyAmount: order.rate,
+            startAmount: amount,
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: amount
+            currentPrice: markupPrice,
+            amount: amount,
+            timestamp: Date.now()
           }
 
           // Удаляем частично выполненный ордер
@@ -212,14 +216,28 @@ class Wex extends Base {
           // Выставляем на продажу
           this.task = {
             type: 'sell',
+            buyAmount: order.rate,
+            startAmount: order.start_amount,
             price: markupPrice,
             minPrice: markupPrice, // минимальная достигнутая цена
             maxPrice: markupPrice, // максимальная, на данный момент это цена закупки
-            amount: amount
+            currentPrice: markupPrice,
+            amount: amount,
+            timestamp: Date.now()
           }
         } else {
+          // Считаем заработок
+          const income = (this.task.amount * order.rate) - (this.task.startAmount * this.task.buyAmount)
+
+          // Прибавляем заработок
+          this.income += income
+          
           // Оповещаем о продаже
           this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.rate} \norder: ${id}`)
+
+
+          // Очищаем задачу
+          this.task = null
         }
 
         // Удаляем ордер из наблюдения
@@ -312,10 +330,14 @@ class Wex extends Base {
         // Выставляем на продажу не отловленную покупку
         this.task = {
           type: 'sell',
+          buyAmount: lastTrade.rate,
+          startAmount: lastTrade.start_amount,
           price: minSellPrice,
           minPrice: minSellPrice, // минимальная достигнутая цена
           maxPrice: minSellPrice, // максимальная, на данный момент это цена закупки
-          amount: amount // Цена продажи с вычетом коммиссии
+          amount: amount,// Цена продажи с вычетом коммиссии
+          currentPrice: minSellPrice,
+          timestamp: Date.now()
         }
         return false
       }
@@ -371,9 +393,11 @@ class Wex extends Base {
             type: 'buy',
             price: minPrice,
             minPrice: minPrice, // минимальная достигнутая цена
+            currentPrice: minPrice,
             amount: amount,
             repeat: 30,
-            bottom: 0 // если дно будет равно 1, то подтверждаем что это дно и покупаем
+            bottom: 0, // если дно будет равно 1, то подтверждаем что это дно и покупаем
+            timestamp: Date.now()
           }
         } catch (e) {
           this.console(`Buy error:`, e.error)
@@ -387,6 +411,9 @@ class Wex extends Base {
   // Ожидание дна
   async watch(transaction) {
     if (!transaction || !this.task) return false
+
+    // Устанавливаем текущий курс
+    this.task.currentPrice = transaction
 
     // Покупка
     const buy = async () => {

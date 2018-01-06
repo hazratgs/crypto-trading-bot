@@ -1,10 +1,10 @@
+// const telegram = require('./libs/telegram')
 const config = require('./conf')
-const sendMessage = require( './libs/telegram')
 const colors = require('colors')
 const moment = require('moment')
 
 class Base {
-  constructor ({ api, pair, percentWallet, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
@@ -34,6 +34,15 @@ class Base {
 
     // Общий заработок
     this.income = 0
+
+    // Дата запуска бота
+    this.startTimestamp = Date.now() 
+
+    // Методы для отправки и обработки сообщений от разработчика
+    this.telegram = telegram
+
+    // Обработка команд
+    this.telegram.init(this)
   }
 
   // Вывод в консоль с текущим временем
@@ -42,7 +51,7 @@ class Base {
   }
 
   // Поиск в истории транзакций
-  findHistory (tid) {
+  findHistory(tid) {
     for (let item of this.history) {
       if (tid === item.tid) return true
     }
@@ -50,34 +59,34 @@ class Base {
   }
 
   // Удаление ордера
-  removeOrder (id) {
+  removeOrder(id) {
     for (let key in this.orders) {
-    	if (this.orders[key] === id) {
-    		this.orders.splice(key, 1)
-    	}
+      if (this.orders[key] === id) {
+        this.orders.splice(key, 1)
+      }
     }
   }
 
   // Формирование цены продажи
-  getMarkupPrice (rate) {
+  getMarkupPrice(rate) {
     return parseFloat(((rate * ((this.markup + (this.commission * 2)) / 100)) + rate).toFixed(3))
   }
 
   // Получаем коммисию
-  getCommission (amount) {
+  getCommission(amount) {
     return parseFloat((amount - (amount * (1 - (this.commission / 100)))).toFixed(8))
   }
 
   // Обертка над sendMessage
-  sendMessage (message) {
-    sendMessage(message)
+  sendMessage(message) {
+    this.telegram.sendMessage(message)
   }
 
   // Добавить новую свечу или вставить в текущую
-  async addElementCandles (item, timestamp = Date.now(), watch = true) {
+  async addElementCandles(item, timestamp = Date.now(), watch = true) {
     // Преобразовываем в число
     item[1] = parseFloat(item[1])
-    
+
     const [type, price, amount] = item
     const date = new Date(timestamp)
 
