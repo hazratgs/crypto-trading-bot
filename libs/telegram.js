@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api')
 const moment = require('moment')
 const config = require('../conf')
+moment.locale('ru')
 
 class Telegram {
   constructor() {
@@ -48,31 +49,28 @@ class Telegram {
       const [coin] = item.pair.split('_')
       const [, wallet] = item.pair.split('_')
 
-      const state = item.task.currentPrice > item.task.price ? '+' : '-'
-      const percent = Math.abs(100 - ((item.task.currentPrice * 100) / item.task.price))
-      const income = Math.abs(item.task.price - item.task.currentPrice)
-
+      const state = item.task.currentPrice > item.task.price ? '🔥 +' : '😩 -'
+      const percent = (100 - ((item.task.currentPrice * 100) / item.task.price)).toFixed(2)
+      const income = Math.abs(item.task.price - item.task.currentPrice).toFixed(0)
       const minPriceBuy = item.task.minPrice - item.task.currentPrice
 
       return item.task.type === 'sell'
-        ? `${item.pair.toUpperCase()} - 📈 Продажа\n
-            Объем: ${item.task.amount} ${coin}\n
-            Закупка: ${item.task.buyAmount} ${wallet}\n
-            Продажа: ${item.task.price} ${wallet}\n
-            Макс. цена: ${item.task.maxPrice} ${wallet}\n
-            Текущая цена: ${item.task.currentPrice} ${wallet} (${state}${income} ${wallet}, ${state}${percent}%)\n
-            Время: ${moment(item.task.timestamp).subtract(1, 'hours').calendar()}
-          `
-        : `${item.pair.toUpperCase()} - 📉 Покупка\n
-            Объем: ${item.task.amount} ${coin}\n
-            Мин. цена: ${item.task.minPrice} ${wallet}\n
-            Текущая цена: ${item.task.currentPrice} ${wallet} (${minPriceBuy} ${wallet})\n
-            Время: ${moment(item.task.timestamp).subtract(1, 'hours').calendar()}
-          `
+        ? `${item.pair.toUpperCase()} - 📈 Продажа
+Объем: ${item.task.amount} ${coin}
+Закупка: ${item.task.buyAmount} ${wallet}
+Продажа: ${item.task.price} ${wallet}
+Макс. цена: ${item.task.maxPrice} ${wallet}
+Курс: ${item.task.currentPrice} ${wallet} (${state}${income} ${wallet}, ${percent}%)
+Время: ${moment(item.task.timestamp).subtract(1, 'hours').calendar()}`
+        : `${item.pair.toUpperCase()} - 📉 Покупка
+Объем: ${item.task.amount} ${coin}
+Мин. цена: ${item.task.minPrice} ${wallet}
+Курс: ${item.task.currentPrice} ${wallet} (${minPriceBuy} ${wallet})
+Время: ${moment(item.task.timestamp).subtract(1, 'hours').calendar()}`
     })
 
     // Отправляем разработчику
-    this.keyboard(message.join('\n• • •\n'), this.buttons)
+    this.keyboard(message.join('\n• • • • • •\n'), this.buttons)
   }
 
   // Заработок
@@ -94,8 +92,18 @@ class Telegram {
   }
 
   // Баланс кошельков 
-  balance() {
+  async balance() {
+    const balance = this.apps.reduce((prev, current) => !prev 
+      ? ({ [current.purse]: current }) 
+      : ({ ...prev, [current.purse]: current }), {}
+    )
     
+    let message = `Баланс:\n`
+    for (let item in balance) {
+      const wallets = await balance[item].getBalance()
+      message += `${item}\n${wallets.map(item => `${item.type}: ${item.value}`).join('\n')}\n\n`
+    }
+    this.keyboard(message, this.buttons)
   }
 
   // Отправка сообщения

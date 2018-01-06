@@ -67,6 +67,16 @@ class Wex extends Base {
     }
   }
 
+  // Данные кошелька
+  async getBalance () {
+    const wallets = await this.getWallets()
+    const data = []
+    for (let item in wallets) {
+      data.push({ type: item, value: wallets[item] })
+    }
+    return data
+  }
+
   // Получаем объем для продажи
   async getSellAmount () {
     const wallets = await this.getWallets()

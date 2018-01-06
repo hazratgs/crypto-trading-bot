@@ -8,6 +8,9 @@ class Base {
     // Доступы к API
     this.api = config.api[api]
 
+    // Кошелек
+    this.purse = api
+
     // Конфигурационные данные
     this.config = config
 
@@ -120,6 +123,11 @@ class Base {
 
     // Объем
     this.candles[0].amount += amount
+  }
+
+  // Получаем данные кошелька
+  getBalance () {
+    // Реализовать во всех дочерних объектах
   }
 }
 
