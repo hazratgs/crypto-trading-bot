@@ -252,10 +252,10 @@ class Wex extends Base {
           }
         } else {
           // Считаем заработок
-          const income = (this.task.amount * order.rate) - (this.task.startAmount * this.task.buyAmount)
+          // const income = (this.task.amount * order.rate) - (this.task.startAmount * this.task.buyAmount)
 
           // Прибавляем заработок
-          this.income += income
+          // this.income += income
 
           // Очищаем задачу
           this.task = null
