@@ -4,7 +4,7 @@ const colors = require('colors')
 const moment = require('moment')
 
 class Base {
-  constructor({ api, pair, percentWallet, telegram, login, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
@@ -35,6 +35,9 @@ class Base {
     // Задача
     this.task = null
 
+    // История транзакций
+    this.history = []
+
     // Общий заработок
     this.income = 0
 
@@ -48,7 +51,7 @@ class Base {
     this.telegram.init(this)
 
     // Обозначение текущего аккаунта
-    this.login = login
+    this.login = this.api.login
   }
 
   // Вывод в консоль с текущим временем

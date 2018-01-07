@@ -1,5 +1,6 @@
 const Telegram = require('./libs/telegram')
 const Wex = require('./exchanges/wex')
+const Exmo = require('./exchanges/exmo')
 
 const telegram = new Telegram()
 
@@ -18,8 +19,7 @@ const defaultParams = {
     percentWallet: null,
     commission: 0.2,
     markup: 0.4,
-    telegram: telegram,
-    login: 'hazratgs'
+    telegram: telegram
 }
 
 // Инициализация Wex ботов USD
@@ -29,9 +29,12 @@ const WexETHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'eth_usd', perce
 const WexDSHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'dsh_usd', percentWallet: percentWalletUSDWex })
 
 // Bitcoen Wex
-const WexETHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'eth_btc', percentWallet: percentWalletBTCWex, login: 'hazratgs2' })
-const WexLTCBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'ltc_btc', percentWallet: percentWalletBTCWex, login: 'hazratgs2' })
-const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', percentWallet: percentWalletBTCWex, login: 'hazratgs2' })
+const WexETHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'eth_btc', percentWallet: percentWalletBTCWex })
+const WexLTCBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'ltc_btc', percentWallet: percentWalletBTCWex })
+const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', percentWallet: percentWalletBTCWex })
+
+// Инициализация Exmo USD
+const ExmoBTCUSD = new Exmo({ ...defaultParams, api: 'exmo', pair: 'BTC_USD', percentWallet: percentWalletUSDWex })
 
 // Инициализация Bitfinex
 // const BitfinexBTC = new Bitfinex({ pair: 'dsh_rur', percentWallet: percentWalletRURWex, commission: 0.2, markup: 1 })
@@ -40,15 +43,17 @@ const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', pe
 // const BitstampBTC = new Bitstamp({ api: 'wex', pair: 'btcusd', percentWallet: percentWalletRURWex, commission: 0.2, markup: 1 })
 
 // Старт Wex ботов
-WexBTCUSD.init()
-WexLTCUSD.init()
-WexETHUSD.init()
-WexDSHUSD.init()
-WexETHBTC.init()
-WexLTCBTC.init()
-WexDSHBTC.init()
+// WexBTCUSD.init()
+// WexLTCUSD.init()
+// WexETHUSD.init()
+// WexDSHUSD.init()
+// WexETHBTC.init()
+// WexLTCBTC.init()
+// WexDSHBTC.init()
 
 // BitfinexBTC.init()
+
+ExmoBTCUSD.init()
 
 // Старт Bitstamp ботов
 // BitstampBTC.init()
