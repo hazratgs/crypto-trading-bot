@@ -8,47 +8,53 @@ class Exmo extends Base {
     // Инициализация соединения
     exmo.init({ key: this.api.key, secret: this.api.secret })
     this.exmo = exmo
+
   }
 
   init() {
-    this.console(`run wex ${this.pair}`.green)
+    this.console(`run exmo ${this.pair}`.green)
 
     // Формирование структурированных данных транзакций
     this.trades()
 
     // Заносим активные ордеры в массив
-    // setInterval(() => this.observeActiveOrders(), 1000)
+    setInterval(() => this.observeActiveOrders(), 1000)
 
     // Наблюдение за ордерами
-    // setInterval(() => this.observeOrders(), 1000)
+    setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    // setInterval(() => this.observe(), 60000)
+    setInterval(() => this.observe(), 1000)
   }
 
   // Последняя транзакция
   async lastTransaction() {
     try {
-      // Последняя транзакция
-      const trandeHistory = await this.btce.tradeHistory({ from: 0, count: 1, pair: this.pair })
-      let last = null
-      for (let item in trandeHistory) {
-        if (!last) {
-          last = trandeHistory[item]
-          last.id = item
-        }
-      }
-      return last
+      // Все транзакции
+      const transactions = this.exmo.query('user_trades', { pair: this.pair, limit: 1 })
+      if (!transactions[this.pair] || !transactions[this.pair].length ) throw new Error('Нет ордеров в данной паре')
+
+      // Последний транзакция
+      const [lastTransaction] = activeOrders[this.pair]
+      return lastTransaction
     } catch (e) {
       return { type: 'sell' }
     }
   }
 
+  // Список активных ордеров
+  async activeOrders() {
+    const data = await this.exmo.query('user_open_orders')
+
+    // Если нет активных ордеров
+    if (!data[this.pair]) throw new Error('Нет активных ордеров')
+  }
+
   // Получить данные кошельков
   async getWallets () {
     try {
-      const info = await this.btce.getInfo()
-      return info.funds
+      const info = await this.exmo.query('user_info')
+      return info.balances
 
     } catch (e) {
       this.console('Error getWallets', e.error)
@@ -167,7 +173,7 @@ class Exmo extends Base {
   async observeOrders() {
     this.orders.map(async id => {
       try {
-        const info = await this.btce.orderInfo(id)
+        const info = await this.exmo.query(id)
         const order = info[id]
 
         // Если ордер отменен, удаляем его из наблюдения
@@ -265,8 +271,8 @@ class Exmo extends Base {
   async observeActiveOrders() {
     try {
       // Получение списка активных ордеров
-      const activeOrders = await this.btce.activeOrders(this.pair)
-      for (let id in activeOrders) {
+      const activeOrders = await this.exmo.query('user_open_orders')
+      for (let id in activeOrders[this.pair]) {
         if (!this.orders.filter(item => item === id).length) {
           this.orders.push(id)
         }
@@ -282,17 +288,23 @@ class Exmo extends Base {
   trades() {
 		setInterval(async () => {
 			try {
-				const trades = await this.exmo.query("trades", { pair: this.pair })
-				trades.map(item => {
+        const data = await this.exmo.query("trades", { pair: this.pair, limit: !this.candles.length ? 5000 : 100 })
+        const trades = data[this.pair].reverse()
 
-				})
-				console.log(trades[this.pair])
+        for (let item of trades) {
+          // Пропускаем уже обработанные транзакции
+          if (this.history.includes(item.trade_id)) continue
+
+          // Добавляем в историю
+          this.history.push(item.trade_id)
+
+          // Отправляе на обработку
+          await this.addElementCandles([item.type, item.price, parseFloat(item.amount)], item.date * 1000)
+        }
 			} catch (e) {
 				console.log('Error trades:', e)
 			}
 		}, 1000)
-
-    // await this.addElementCandles(item[0])
   }
 
   // Формирование структурированных данных купли/продажи
@@ -322,10 +334,10 @@ class Exmo extends Base {
 
       try {
         // Получение списка активных ордеров
-        await this.btce.activeOrders(this.pair)
+        const activeOrders = await this.activeOrders(this.pair)
 
         // Есть активный ордер, ожидаем завершения
-        this.console(`observe: есть активный ордер ${this.pair}`)
+        this.console(`observe: есть активный ордер ${this.pair}`, activeOrders)
         return false
       } catch (e) {
         // Не обрабатываем исключение
@@ -346,7 +358,7 @@ class Exmo extends Base {
         // Восстанавливаем процесс продажи после остановки бота
 
         // Минимальная сумма продажи
-        const minSellPrice = this.getMarkupPrice(lastTrade.rate)
+        const minSellPrice = this.getMarkupPrice(lastTrade.price)
 
         // Объем для продажи
         const amount = await this.getSellAmount()
@@ -354,8 +366,8 @@ class Exmo extends Base {
         // Выставляем на продажу не отловленную покупку
         this.task = {
           type: 'sell',
-          buyAmount: lastTrade.rate,
-          startAmount: lastTrade.start_amount,
+          buyAmount: lastTrade.price,
+          startAmount: lastTrade.quantity,
           price: minSellPrice,
           minPrice: minSellPrice, // минимальная достигнутая цена
           maxPrice: minSellPrice, // максимальная, на данный момент это цена закупки
