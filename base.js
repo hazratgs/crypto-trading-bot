@@ -58,13 +58,13 @@ class Base {
   // Инициализация
   init() {
     // Заносим активные ордеры в массив
-    // setInterval(() => this.observeActiveOrders(), 1000)
+    setInterval(() => this.observeActiveOrders(), 1000)
 
     // Наблюдение за ордерами
-    // setInterval(() => this.observeOrders(), 1000)
+    setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    // setInterval(() => this.observe(), 60000)
+    setInterval(() => this.observe(), 60000)
 
     // Метод заполнения свечей, у каждой биржи своя реализация
     this.trades()
