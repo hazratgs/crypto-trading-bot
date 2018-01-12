@@ -122,4 +122,4 @@ const BinanceETHBCC = new Binance({
 BinanceETHXRP.init()
 BinanceETHNEO.init()
 BinanceETHBCC.init()
-BinanceETHETC.init()
+// BinanceETHETC.init()
