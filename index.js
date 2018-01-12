@@ -12,7 +12,7 @@ const percentWalletUSDWex = ['btc', 'eth', 'ltc', 'dsh']
 const percentWalletBTCWex = ['eth', 'ltc', 'dsh']
 
 // Распределение бюджета Binance
-const percentWalletETHBinance = ['BNB']
+const percentWalletETHBinance = ['XRP', 'NEO', 'BCC', 'ETC']
 
 // Стандартные параметры бота
 const defaultParams = {
@@ -78,13 +78,36 @@ const defaultParams = {
 // })
 
 // Binance бот
-const BinanceETH = new Binance({
+const BinanceETHXRP = new Binance({
     ...defaultParams,
     api: 'binance',
-    pair: 'BNBETH',
+    pair: 'XRPETH',
     purse: 'ETH',
     percentWallet: percentWalletETHBinance
 })
+const BinanceETHNEO = new Binance({
+    ...defaultParams,
+    api: 'binance',
+    pair: 'NEOETH',
+    purse: 'ETH',
+    percentWallet: percentWalletETHBinance
+})
+const BinanceETHBCC = new Binance({
+    ...defaultParams,
+    api: 'binance',
+    pair: 'BCCETH',
+    purse: 'ETH',
+    percentWallet: percentWalletETHBinance
+})
+const BinanceETHETC = new Binance({
+    ...defaultParams,
+    api: 'binance',
+    pair: 'ETCETH',
+    purse: 'ETH',
+    percentWallet: percentWalletETHBinance
+})
+ 
+
 
 // Старт Wex ботов
 // WexBTCUSD.init()
@@ -95,4 +118,8 @@ const BinanceETH = new Binance({
 // WexLTCBTC.init()
 // WexDSHBTC.init()
 
-BinanceETH.init()
+// Старт Binance ботов
+BinanceETHXRP.init()
+BinanceETHNEO.init()
+BinanceETHBCC.init()
+BinanceETHETC.init()
