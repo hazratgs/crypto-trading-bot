@@ -439,7 +439,7 @@ class Base {
           this.task = null
 
           // Оповещаем о продаже
-          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.price} \norder: ${id}`)
+          this.sendMessage(`🎉 Продали ${order.amount} ${this.pair} по курсу ${order.price} \norder: ${id}`)
         }
 
         // Удаляем ордер из наблюдения
