@@ -9,7 +9,7 @@ class Binance extends Base {
 		this.query = new api.BinanceRest({
 			key: this.api.key,
 			secret: this.api.secret
-		})
+		}) 
 
 		// WS
 		this.ws = new api.BinanceWS(true)
@@ -32,7 +32,10 @@ class Binance extends Base {
 		try {
 			// Первая запуск загружает большой список данных
 			await this.firstLoadTrades()
-			this.ws.onTrade(this.pair, async item => await this.addElementCandles([item.maker ? 'sell' : 'buy', item.price, item.quantity]))
+			this.ws.onTrade(
+				this.pair, 
+				async item => await this.addElementCandles([item.maker ? 'sell' : 'buy', item.price, item.quantity])
+			)
 		} catch (e) {
 			console.log('Error trades:', e.error)
 		}
@@ -57,6 +60,7 @@ class Binance extends Base {
 
 			// Добавляем методы для стандартизации разных бирж
 			order.amount = order.origQty
+			order.timestamp = order.time
 			return order
 		} catch (e) {
 			// Возвращаем информацию, что можно совершить покупку
@@ -96,8 +100,8 @@ class Binance extends Base {
 		const order = await this.query.queryOrder({ symbol: this.pair, orderId: id })
 
 		// Добавляем методы для стандартизации разных бирж
-		order.amount = order.start_amount
-		order.timestamp = order.timestamp_created
+		order.amount = order.origQty
+		order.timestamp = order.time
 
 		return order
 	}

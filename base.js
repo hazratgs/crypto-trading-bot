@@ -520,6 +520,7 @@ class Base {
   async getHistory() {
     try {
       const history = await this.getHistoryApi()
+      console.log('history', history)
       const data = []
 
       for (let item in history) {
@@ -527,7 +528,7 @@ class Base {
       }
       return data
     } catch (e) {
-      console.log('Error getHistory', e.error)
+      console.log('Error getHistory', e)
     }
   }
 
@@ -535,9 +536,6 @@ class Base {
 
   // Получаем данные кошелька
   getBalance() { }
-
-  // Получаем историю сделок
-  getHistory() { }
 
   // Активные ордеры
   activeOrders() { }
