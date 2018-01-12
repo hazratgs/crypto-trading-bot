@@ -1,10 +1,9 @@
 const Telegram = require('./libs/telegram')
 const Wex = require('./exchanges/wex')
-const Exmo = require('./exchanges/exmo')
+const Binance = require('./exchanges/binance')
 
+// Инициализация telegram бота
 const telegram = new Telegram()
-
-// const Bitstamp = require('./exchanges/bitstamp')
 
 // Расппеделение бюджета USD Wex
 const percentWalletUSDWex = ['btc', 'eth', 'ltc', 'dsh']
@@ -23,24 +22,18 @@ const defaultParams = {
 }
 
 // Инициализация Wex ботов USD
-const WexBTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'btc_usd', percentWallet: percentWalletUSDWex })
-const WexLTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'ltc_usd', percentWallet: percentWalletUSDWex })
-const WexETHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'eth_usd', percentWallet: percentWalletUSDWex })
-const WexDSHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'dsh_usd', percentWallet: percentWalletUSDWex })
+// const WexBTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'btc_usd', percentWallet: percentWalletUSDWex })
+// const WexLTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'ltc_usd', percentWallet: percentWalletUSDWex })
+// const WexETHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'eth_usd', percentWallet: percentWalletUSDWex })
+// const WexDSHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'dsh_usd', percentWallet: percentWalletUSDWex })
 
 // Bitcoen Wex
-const WexETHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'eth_btc', percentWallet: percentWalletBTCWex })
-const WexLTCBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'ltc_btc', percentWallet: percentWalletBTCWex })
-const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', percentWallet: percentWalletBTCWex })
+// const WexETHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'eth_btc', percentWallet: percentWalletBTCWex })
+// const WexLTCBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'ltc_btc', percentWallet: percentWalletBTCWex })
+// const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', percentWallet: percentWalletBTCWex })
 
-// Инициализация Exmo USD
-const ExmoBTCUSD = new Exmo({ ...defaultParams, api: 'exmo', pair: 'BTC_USD', percentWallet: percentWalletUSDWex })
-
-// Инициализация Bitfinex
-// const BitfinexBTC = new Bitfinex({ pair: 'dsh_rur', percentWallet: percentWalletRURWex, commission: 0.2, markup: 1 })
-
-// Инициализация Bitstamp
-// const BitstampBTC = new Bitstamp({ api: 'wex', pair: 'btcusd', percentWallet: percentWalletRURWex, commission: 0.2, markup: 1 })
+// Binance бот
+const BinanceETH = new Binance({ ...defaultParams, api: 'binance', pair: 'BNBETH', purse: 'ETH', percentWallet: percentWalletBTCWex })
 
 // Старт Wex ботов
 // WexBTCUSD.init()
@@ -51,9 +44,4 @@ const ExmoBTCUSD = new Exmo({ ...defaultParams, api: 'exmo', pair: 'BTC_USD', pe
 // WexLTCBTC.init()
 // WexDSHBTC.init()
 
-// BitfinexBTC.init()
-
-ExmoBTCUSD.init()
-
-// Старт Bitstamp ботов
-// BitstampBTC.init()
+BinanceETH.init()

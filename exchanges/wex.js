@@ -105,10 +105,10 @@ class Wex extends Base {
   }
 
   // Создание ордера
-  async trade(price, amount) {
+  async trade(price, amount, type) {
     await this.query.trade({
       pair: this.pair,
-      type: 'buy',
+      type: type,
       rate: price,
       amount: amount
     })

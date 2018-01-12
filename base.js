@@ -2,12 +2,12 @@ const config = require('./conf')
 const moment = require('moment')
 
 class Base {
-  constructor({ api, pair, percentWallet, telegram, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, purse, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
     // Кошелек
-    this.purse = api
+    this.purse = purse
 
     // Конфигурационные данные
     this.config = config
@@ -58,13 +58,13 @@ class Base {
   // Инициализация
   init() {
     // Заносим активные ордеры в массив
-    setInterval(() => this.observeActiveOrders(), 1000)
+    // setInterval(() => this.observeActiveOrders(), 1000)
 
     // Наблюдение за ордерами
-    setInterval(() => this.observeOrders(), 1000)
+    // setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    setInterval(() => this.observe(), 60000)
+    // setInterval(() => this.observe(), 60000)
 
     // Метод заполнения свечей, у каждой биржи своя реализация
     this.trades()
@@ -104,6 +104,7 @@ class Base {
   async addElementCandles(item, timestamp = Date.now(), watch = true) {
     // Преобразовываем в число
     item[1] = parseFloat(item[1])
+    item[2] = parseFloat(item[2])
 
     const [type, price, amount] = item
     const date = new Date(timestamp)
@@ -255,10 +256,9 @@ class Base {
     try {
       // Получение списка активных ордеров
       const activeOrders = await this.activeOrders()
-      if (activeOrders.includes())
-        for (let id in activeOrders) {
-          if (!this.orders.includes(id)) this.orders.push(id)
-        }
+      for (let id in activeOrders) {
+        if (!this.orders.includes(id)) this.orders.push(id)
+      }
     } catch (e) {
       console.log('Error observeActiveOrders', e.error)
     }
@@ -338,7 +338,7 @@ class Base {
               // Объем продажи
               const amount = parseFloat(this.task.amount).toFixed(8)
 
-              // Отправляем заявку на продажу
+              // Отправляем заявку на покупку
               await this.trade(transaction, amount)
 
               // Обнуляем задачу
