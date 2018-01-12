@@ -99,13 +99,13 @@ const BinanceETHBCC = new Binance({
     purse: 'ETH',
     percentWallet: percentWalletETHBinance
 })
-const BinanceETHETC = new Binance({
-    ...defaultParams,
-    api: 'binance',
-    pair: 'ETCETH',
-    purse: 'ETH',
-    percentWallet: percentWalletETHBinance
-})
+// const BinanceETHETC = new Binance({
+//     ...defaultParams,
+//     api: 'binance',
+//     pair: 'ETCETH',
+//     purse: 'ETH',
+//     percentWallet: percentWalletETHBinance
+// })
  
 
 
