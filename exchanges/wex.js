@@ -142,7 +142,6 @@ class Wex extends Base {
     return data
   }
 
-
   // История сделок
   async getHistory() {
     try {
@@ -156,13 +155,6 @@ class Wex extends Base {
     } catch (e) {
       console.log('Error getHistory', e.error)
     }
-  }
-
-  // Получаем объем для продажи
-  async getSellAmount() {
-    const wallets = await this.getWallets()
-    const [wallet] = this.pair.split('_')
-    return wallets[wallet]
   }
 }
 

@@ -11,6 +11,9 @@ const percentWalletUSDWex = ['btc', 'eth', 'ltc', 'dsh']
 // Расппеделение бюджета RUR Wex
 const percentWalletBTCWex = ['eth', 'ltc', 'dsh']
 
+// Распределение бюджета Binance
+const percentWalletETHBinance = ['BNB']
+
 // Стандартные параметры бота
 const defaultParams = {
     api: null,
@@ -22,18 +25,66 @@ const defaultParams = {
 }
 
 // Инициализация Wex ботов USD
-// const WexBTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'btc_usd', percentWallet: percentWalletUSDWex })
-// const WexLTCUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'ltc_usd', percentWallet: percentWalletUSDWex })
-// const WexETHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'eth_usd', percentWallet: percentWalletUSDWex })
-// const WexDSHUSD = new Wex({ ...defaultParams, api: 'wex', pair: 'dsh_usd', percentWallet: percentWalletUSDWex })
+// const WexBTCUSD = new Wex({
+//     ...defaultParams,
+//     api: 'wex',
+//     pair: 'btc_usd',
+//     purse: 'usd',
+//     percentWallet: percentWalletUSDWex
+// })
+// const WexLTCUSD = new Wex({
+//     ...defaultParams,
+//     api: 'wex',
+//     pair: 'ltc_usd',
+//     purse: 'usd',
+//     percentWallet: percentWalletUSDWex
+// })
+// const WexETHUSD = new Wex({
+//     ...defaultParams,
+//     api: 'wex',
+//     pair: 'eth_usd',
+//     purse: 'usd',
+//     percentWallet: percentWalletUSDWex
+// })
+// const WexDSHUSD = new Wex({
+//     ...defaultParams,
+//     api: 'wex',
+//     pair: 'dsh_usd',
+//     purse: 'usd',
+//     percentWallet: percentWalletUSDWex
+// })
 
 // Bitcoen Wex
-// const WexETHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'eth_btc', percentWallet: percentWalletBTCWex })
-// const WexLTCBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'ltc_btc', percentWallet: percentWalletBTCWex })
-// const WexDSHBTC = new Wex({ ...defaultParams, api: 'wexBTC', pair: 'dsh_btc', percentWallet: percentWalletBTCWex })
+// const WexETHBTC = new Wex({
+//     ...defaultParams,
+//     api: 'wexBTC',
+//     pair: 'eth_btc',
+//     purse: 'eth',
+//     percentWallet: percentWalletBTCWex
+// })
+// const WexLTCBTC = new Wex({
+//     ...defaultParams,
+//     api: 'wexBTC',
+//     pair: 'ltc_btc',
+//     purse: 'eth',
+//     percentWallet: percentWalletBTCWex
+// })
+// const WexDSHBTC = new Wex({
+//     ...defaultParams,
+//     api: 'wexBTC',
+//     pair: 'dsh_btc',
+//     purse: 'eth',
+//     percentWallet: percentWalletBTCWex
+// })
 
 // Binance бот
-const BinanceETH = new Binance({ ...defaultParams, api: 'binance', pair: 'BNBETH', purse: 'ETH', percentWallet: percentWalletBTCWex })
+const BinanceETH = new Binance({
+    ...defaultParams,
+    api: 'binance',
+    pair: 'BNBETH',
+    purse: 'ETH',
+    percentWallet: percentWalletETHBinance
+})
 
 // Старт Wex ботов
 // WexBTCUSD.init()

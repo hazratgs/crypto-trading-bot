@@ -11,10 +11,6 @@ class Binance extends Base {
 			secret: this.api.secret
 		})
 
-		this.activeOrders()
-			.then(res => console.log('res', res))
-			.catch(e => console.log('error', e.error))
-
 		// WS
 		this.ws = new api.BinanceWS(true)
 	}
@@ -104,12 +100,6 @@ class Binance extends Base {
 		} catch (e) {
 			console.log('Error buyAmount', e.error)
 		}
-	}
-
-	// Получаем объем для продажи
-	async getSellAmount() {
-		const wallets = await this.getWallets()
-		return wallets[this.purse]
 	}
 
 	// История сделок

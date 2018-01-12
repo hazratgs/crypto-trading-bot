@@ -472,6 +472,12 @@ class Base {
     return false
   }
 
+  	// Получаем объем для продажи
+	async getSellAmount() {
+		const wallets = await this.getWallets()
+		return wallets[this.purse]
+	}
+
   /** API */
 
   // Получаем данные кошелька
