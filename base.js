@@ -476,7 +476,60 @@ class Base {
 	async getSellAmount() {
 		const wallets = await this.getWallets()
 		return wallets[this.purse]
-	}
+  }
+  
+  // Данные кошелька
+	async getBalance() {
+		const wallets = await this.getWallets()
+		const data = []
+		for (let item in wallets) {
+			data.push({ type: item, value: wallets[item] })
+		}
+		return data
+  }
+
+  // Получаем объем исходя из курса и суммы денег
+  async buyAmount(rate) {
+    try {
+      const wallets = await this.getWallets()
+      const distribution = []
+
+      // Находим пустые кошельки
+      for (let key in wallets) {
+        if (this.percentWallet.includes(key) && wallets[key] === 0) {
+          distribution.push({
+            wallet: key,
+            value: wallets[key]
+          })
+        }
+      }
+
+      // Если всего 1 кошелек пустой, отдаем всю сумму
+      if (distribution.length === 1) {
+        // Доступно для использования
+        return parseFloat((wallets[this.purse] / rate).toFixed(8))
+      } else {
+        // Разделяем на части
+        return parseFloat(((wallets[this.purse] / distribution.length) / rate).toFixed(8))
+      }
+    } catch (e) {
+      console.log('Error buyAmount', e.error)
+    }
+  }
+
+  async getHistory() {
+    try {
+      const history = await this.getHistoryApi()
+      const data = []
+
+      for (let item in history) {
+        data.push(history[item])
+      }
+      return data
+    } catch (e) {
+      console.log('Error getHistory', e.error)
+    }
+  }
 
   /** API */
 
@@ -509,6 +562,9 @@ class Base {
 
   // Отмена ордера
   cancelOrder() { }
+  
+  // Получаем историю
+  getHistoryApi () { }
 }
 
 module.exports = Base
