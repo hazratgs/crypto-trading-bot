@@ -1,6 +1,5 @@
 const Base = require('../base')
 const api = require('binance')
-const Pusher = require('pusher-js')
 
 class Binance extends Base {
 	constructor(option) {
@@ -12,6 +11,10 @@ class Binance extends Base {
 			secret: this.api.secret
 		})
 
+		this.activeOrders()
+			.then(res => console.log('res', res))
+			.catch(e => console.log('error', e.error))
+
 		// WS
 		this.ws = new api.BinanceWS(true)
 	}
@@ -21,10 +24,7 @@ class Binance extends Base {
 		try {
 			// Первая запуск загружает большой список данных
 			await this.firstLoadTrades()
-
-			// От сервиса Pusher получаем данные транзакций в реальном времени
-			this.ws.onTrade(this.pair, async item =>
-				await this.addElementCandles([item.maker ? 'sell' : 'buy', item.price, item.quantity]))
+			this.ws.onTrade(this.pair, async item => await this.addElementCandles([item.maker ? 'sell' : 'buy', item.price, item.quantity]))
 		} catch (e) {
 			console.log('Error trades:', e.error)
 		}
@@ -34,7 +34,6 @@ class Binance extends Base {
 	async firstLoadTrades() {
 		try {
 			const trades = await this.query.trades(this.pair)
-
 			for (let item of trades) {
 				await this.addElementCandles([item.isBuyerMaker ? 'buy' : 'sell', item.price, item.qty], item.time, false)
 			}
@@ -69,15 +68,13 @@ class Binance extends Base {
 
 	// Загружаем список активных оредров
 	async activeOrders() {
-		try {
-			const orders = await this.query.openOrders({ symbol: this.pair })
-			return orders.reduce((prev, current) => {
-				prev[current.orderId] = current
-				return prev
-			}, {})
-		} catch (e) {
-			console.log('Error activeOrders', e)
-		}
+		const orders = await this.query.openOrders({ symbol: this.pair })
+		if (!orders.length) throw new Error('Нет активных ордеров')
+
+		return orders.reduce((prev, current) => {
+			prev[current.orderId] = current
+			return prev
+		}, {})
 	}
 
 	// Получаем объем исходя из курса и суммы денег
@@ -150,7 +147,7 @@ class Binance extends Base {
 	async trade(price, amount) {
 		const trade = await this.query.newOrder({
 			symbol: this.pair,
-			side: 'sell', // this.task.type
+			side: this.task.type,
 			type: 'limit',
 			price: price,
 			timeInForce: 'gtc',
@@ -171,7 +168,6 @@ class Binance extends Base {
 		const order = await this.query.queryOrder({ symbol: this.pair, orderId: id })
 
 		// Добавляем методы для стандартизации разных бирж
-		order.price = order.rate
 		order.amount = order.start_amount
 		order.timestamp = order.timestamp_created
 

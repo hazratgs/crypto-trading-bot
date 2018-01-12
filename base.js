@@ -359,8 +359,7 @@ class Base {
   async observeOrders() {
     this.orders.map(async id => {
       try {
-        const info = await this.orderInfo(id)
-        const order = info[id]
+        const order = await this.orderInfo(id)
 
         // Если ордер отменен, удаляем его из наблюдения
         if (order.status === 2) {
@@ -379,7 +378,7 @@ class Base {
           this.sendMessage(`💰 Частично купили ${amount} ${this.pair} из ${order.amount} по курсу ${order.price}\n order_id: ${id}`)
 
           // Формируем минимальную цену продажи
-          const markupPrice = this.getMarkupPrice(order.rate)
+          const markupPrice = this.getMarkupPrice(order.price)
 
           // Выставляем частично купленный объем на продажу
           this.task = {
@@ -440,7 +439,7 @@ class Base {
           this.task = null
 
           // Оповещаем о продаже
-          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.rate} \norder: ${id}`)
+          this.sendMessage(`🎉 Продали ${order.start_amount} ${this.pair} по курсу ${order.price} \norder: ${id}`)
         }
 
         // Удаляем ордер из наблюдения
