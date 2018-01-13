@@ -44,7 +44,7 @@ class Binance extends Base {
 	// Загружаем список активных оредров
 	async activeOrders() {
 		const orders = await this.query.openOrders({ symbol: this.pair })
-		if (!orders.length) throw new Error('Нет активных ордеров')
+		if (!orders.length) throw new Error('no orders')
 
 		return orders.reduce((prev, current) => {
 			prev[current.orderId] = current

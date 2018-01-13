@@ -44,6 +44,7 @@ class Wex extends Base {
   // Загружаем список активных оредров
   async activeOrders() {
     const orders = await this.query.activeOrders(this.pair)
+    console.log('orders wex', orders)
     return orders
   }
 

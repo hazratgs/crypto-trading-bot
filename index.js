@@ -120,6 +120,6 @@ const BinanceETHBCC = new Binance({
 
 // Старт Binance ботов
 BinanceETHXRP.init()
-BinanceETHNEO.init()
-BinanceETHBCC.init()
+// BinanceETHNEO.init()
+// BinanceETHBCC.init()
 // BinanceETHETC.init()

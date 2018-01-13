@@ -260,7 +260,7 @@ class Base {
         if (!this.orders.includes(id)) this.orders.push(id)
       }
     } catch (e) {
-      console.log('Error observeActiveOrders', e.error)
+      // не обрабатываем
     }
   }
 
@@ -309,7 +309,7 @@ class Base {
               // Обнуляем задачу
               this.task = null
             } catch (e) {
-              console.log('Error watch buy:', e.error)
+              console.log('Error watch buy:', e)
             }
           }
         }
@@ -344,7 +344,7 @@ class Base {
               // Обнуляем задачу
               this.task = null
             } catch (e) {
-              console.log('Error sell', e.error)
+              console.log('Error sell', e)
             }
           }
         }
@@ -446,7 +446,7 @@ class Base {
         this.removeOrder(id)
 
       } catch (e) {
-        console.log('Error observeOrders:', e.error)
+        console.log('Error observeOrders:', e)
       }
     })
   }
@@ -465,7 +465,7 @@ class Base {
         await this.cancelOrder(id)
         return true
       } catch (e) {
-        console.log(`Error orderCancelLimit:`, e.error)
+        console.log(`Error orderCancelLimit:`, e)
       }
     }
     // Срок ордера еще не окончен
