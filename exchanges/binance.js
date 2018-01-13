@@ -13,9 +13,6 @@ class Binance extends Base {
 
 		// WS
 		this.ws = new api.BinanceWS(true)
-
-		this.getHistoryApi()
-			.then(res => console.log(res))
 	}
 
 	// Формирование структурированных данных купли/продажи
