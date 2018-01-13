@@ -148,12 +148,15 @@ class Base {
 
     try {
       if (!this.candles.length || this.candles.length < 120) {
+        console.log(`Недостаточно свеч ${this.candles.length} для пары ${this.pair}`)
         return false
       }
 
       try {
         // Получение списка активных ордеров
         await this.activeOrders()
+        this.console.log(`Есть активный ордер у пары ${this.pair}`)
+
         return false
       } catch (e) {
         // Не обрабатываем исключение
@@ -172,6 +175,7 @@ class Base {
       // Ожидаем, что последняя транзакция, это продажа
       if (lastTrade.type === 'buy' || this.task !== null) {
         // Восстанавливаем процесс продажи после остановки бота
+        console.log(`Восстановление продажу после сбоя ${this.pair}`)
 
         // Минимальная сумма продажи
         const minSellPrice = this.getMarkupPrice(lastTrade.prie)
@@ -245,6 +249,8 @@ class Base {
           bottom: 0, // если дно будет равно 1, то подтверждаем что это дно и покупаем
           timestamp: Date.now()
         }
+
+        console.log(`Достигнуто часовое дно для пары ${this.pair}`)
       }
     } catch (e) {
       console.log(`Error observe: ${e.error}`, e)
@@ -286,7 +292,7 @@ class Base {
         // Если цена последней транзакции выросла
         // по сравнению с минимальной ценой, а так же все еще ниже часового минимума
         if (((1 - (this.task.minPrice / transaction)) * 1000) >= 2) {
-          if (((1 - (this.task.minPrice / transaction)) * 1000) >= 4) {
+          if (((1 - (this.task.minPrice / transaction)) * 1000) >= 10) {
             this.task.repeat--
             return false
           }
@@ -302,6 +308,8 @@ class Base {
             try {
               // Объем покупки
               const amount = parseFloat(this.task.amount).toFixed(8)
+
+              console.log(`Выгодный курс ${transaction} для покупки ${this.task.amount} ${this.pair}`)
 
               // Отправляем заявку на покупку
               await this.trade(transaction, amount)
@@ -330,13 +338,16 @@ class Base {
 
         // Если цена последней транзакции снизилась
         // по сравнению с максимальной ценой, а так же все еще выше часового минимума
-        if (((1 - (transaction / this.task.maxPrice)) * 1000) >= 3) {
+        if (((1 - (transaction / this.task.maxPrice)) * 1000) >= 10) {
+          console.log(`Курс снижается ${this.pair}`)
 
           // Цена выше установленного минимума
           if (transaction >= this.task.price) {
             try {
               // Объем продажи
               const amount = parseFloat(this.task.amount).toFixed(8)
+
+              console.log(`Отправляем заявку на продажу ${amount} по курсу ${transaction} ${this.pair}`)
 
               // Отправляем заявку на покупку
               await this.trade(transaction, amount)
@@ -375,7 +386,7 @@ class Base {
           const amount = await this.getSellAmount()
 
           // Оповещаем пользователя о купле
-          this.sendMessage(`💰 Частично купили ${amount} ${this.pair} из ${order.amount} по курсу ${order.price}\n order_id: ${id}`)
+          this.sendMessage(`💰 Частично купили ${amount} ${this.pair} по курсу ${order.price}\n order_id: ${id}`)
 
           // Формируем минимальную цену продажи
           const markupPrice = this.getMarkupPrice(order.price)
