@@ -9,10 +9,13 @@ class Binance extends Base {
 		this.query = new api.BinanceRest({
 			key: this.api.key,
 			secret: this.api.secret
-		}) 
+		})
 
 		// WS
 		this.ws = new api.BinanceWS(true)
+
+		this.getHistoryApi()
+			.then(res => console.log(res))
 	}
 
 	// Формирование структурированных данных купли/продажи
@@ -33,7 +36,7 @@ class Binance extends Base {
 			// Первая запуск загружает большой список данных
 			await this.firstLoadTrades()
 			this.ws.onTrade(
-				this.pair, 
+				this.pair,
 				async item => await this.addElementCandles([item.maker ? 'sell' : 'buy', item.price, item.quantity])
 			)
 		} catch (e) {
@@ -57,11 +60,9 @@ class Binance extends Base {
 		try {
 			// Последняя транзакция
 			const [order] = await this.query.allOrders({ symbol: this.pair, limit: 1 })
-
+				
 			// Добавляем методы для стандартизации разных бирж
-			order.amount = order.origQty
-			order.timestamp = order.time
-			return order
+			return this.changeOrder(order)
 		} catch (e) {
 			// Возвращаем информацию, что можно совершить покупку
 			return { type: 'sell' }
@@ -100,21 +101,51 @@ class Binance extends Base {
 		const order = await this.query.queryOrder({ symbol: this.pair, orderId: id })
 
 		// Добавляем методы для стандартизации разных бирж
-		order.amount = order.origQty
-		order.timestamp = order.time
-
-		return order
+		return this.changeOrder(order)
 	}
 
 	// История сделок
-  getHistoryApi () {
-    return this.query.allOrders({ symbol: this.pair, limit: 20 })
+	getHistoryApi() {
+		return this.query.allOrders({ symbol: this.pair, limit: 20 })
 	}
 
 	// Отмена ордера
 	async cancelOrder(id) {
 		const removeOrder = await this.query.cancelOrder({ symbol: this.pair, orderId: id })
 		return removeOrder
+	}
+
+	// Приводим к 1 стандарту order
+	changeOrder (order) {
+		switch (order.status) {
+			case 'NEW':
+				order.status = 0
+				break
+
+			case 'FILLED':
+				order.status = 1
+				break
+
+			case 'CANCELED':
+				order.status = 2
+				break
+
+			case 'PARTIALLY_FILLED':
+				order.status = 3
+				break
+
+			default:
+				order.status = 2
+				break
+		}
+		
+		order.price = parseFloat(order.price)
+		order.amount = parseFloat(order.origQty)
+		order.type = order.side
+		order.start_amount = order.executedQty
+		order.timestamp = order.time
+
+		return order
 	}
 }
 

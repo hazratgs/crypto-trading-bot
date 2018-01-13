@@ -85,20 +85,20 @@ const BinanceETHXRP = new Binance({
     purse: 'ETH',
     percentWallet: percentWalletETHBinance
 })
-const BinanceETHNEO = new Binance({
-    ...defaultParams,
-    api: 'binance',
-    pair: 'NEOETH',
-    purse: 'ETH',
-    percentWallet: percentWalletETHBinance
-})
-const BinanceETHBCC = new Binance({
-    ...defaultParams,
-    api: 'binance',
-    pair: 'BCCETH',
-    purse: 'ETH',
-    percentWallet: percentWalletETHBinance
-})
+// const BinanceETHNEO = new Binance({
+//     ...defaultParams,
+//     api: 'binance',
+//     pair: 'NEOETH',
+//     purse: 'ETH',
+//     percentWallet: percentWalletETHBinance
+// })
+// const BinanceETHBCC = new Binance({
+//     ...defaultParams,
+//     api: 'binance',
+//     pair: 'BCCETH',
+//     purse: 'ETH',
+//     percentWallet: percentWalletETHBinance
+// })
 // const BinanceETHETC = new Binance({
 //     ...defaultParams,
 //     api: 'binance',
