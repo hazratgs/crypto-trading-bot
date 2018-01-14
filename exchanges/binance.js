@@ -18,7 +18,7 @@ class Binance extends Base {
 	// Формирование структурированных данных купли/продажи
 	async firstLoadTrades() {
 		try {
-			const trades = await this.query.trades({ symbol: this.pair, limit: 5000 })
+			const trades = await this.query.trades(this.pair)
 			for (let item of trades) {
 				await this.addElementCandles([item.isBuyerMaker ? 'buy' : 'sell', item.price, item.qty], item.time, false)
 			}
