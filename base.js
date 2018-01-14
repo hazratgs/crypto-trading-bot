@@ -2,12 +2,15 @@ const config = require('./conf')
 const moment = require('moment')
 
 class Base {
-  constructor({ api, pair, percentWallet, telegram, purse, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, purseBuy, purseSell, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
-    // Кошелек
-    this.purse = purse
+    // Кошелек покупки
+    this.purseBuy = purseBuy
+
+    // Кошелек продажи
+    this.purseSell = purseSell
 
     // Конфигурационные данные
     this.config = config
@@ -64,7 +67,7 @@ class Base {
     setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    setInterval(() => this.observe(), 60000)
+    setInterval(() => this.observe(), 6000)
 
     // Метод заполнения свечей, у каждой биржи своя реализация
     this.trades()
@@ -87,7 +90,7 @@ class Base {
 
   // Формирование цены продажи
   getMarkupPrice(rate) {
-    return parseFloat(((rate * ((this.markup + (this.commission * 2)) / 100)) + rate).toFixed(3))
+    return parseFloat(((rate * ((this.markup + (this.commission * 2)) / 100)) + rate).toFixed(8))
   }
 
   // Получаем коммисию
@@ -155,8 +158,6 @@ class Base {
       try {
         // Получение списка активных ордеров
         await this.activeOrders()
-        this.console.log(`Есть активный ордер у пары ${this.pair}`)
-
         return false
       } catch (e) {
         // Не обрабатываем исключение
@@ -171,14 +172,14 @@ class Base {
 
       // Последняя транзакция
       const lastTrade = await this.lastTransaction()
-
+      
       // Ожидаем, что последняя транзакция, это продажа
-      if (lastTrade.type === 'buy' || this.task !== null) {
-        // Восстанавливаем процесс продажи после остановки бота
-        console.log(`Восстановление продажу после сбоя ${this.pair}`)
+      if (lastTrade.type === 'buy' && this.task !== null) {
+        // Восстанавливаем процесс продажи после остановки бота 
+        console.log(`Восстановление продажу после сбоя ${this.pair}`, lastTrade)
 
         // Минимальная сумма продажи
-        const minSellPrice = this.getMarkupPrice(lastTrade.prie)
+        const minSellPrice = this.getMarkupPrice(lastTrade.price)
 
         // Объем для продажи
         const amount = await this.getSellAmount()
@@ -186,7 +187,7 @@ class Base {
         // Выставляем на продажу не отловленную покупку
         this.task = {
           type: 'sell',
-          buyAmount: lastTrade.prie,
+          buyAmount: lastTrade.price,
           startAmount: lastTrade.amount,
           price: minSellPrice,
           minPrice: minSellPrice, // минимальная достигнутая цена
@@ -206,7 +207,7 @@ class Base {
       }
 
       // Курс по которому мы купим
-      const minPrice = parseFloat(((current.price.min * (0.02 / 100)) + current.price.min).toFixed(3))
+      const minPrice = parseFloat(((current.price.min * (0.02 / 100)) + current.price.min).toFixed(8))
 
       // объем исходя из всей суммы
       const amount = await this.buyAmount(minPrice)
@@ -282,23 +283,27 @@ class Base {
       // Если цена на протяжении долгого времени стоит высокой, удаляем задачу
       if (!this.task.repeat) {
         this.task = null
+        console.log(`Исчерпаны попытки купить ${this.pair}`)
         return false
       }
 
       // Курс падает, ждем дна
       if (transaction <= this.task.minPrice) {
+        console.log(`Курс падает ${transaction}, минимум ${this.task.minPrice}`)
         this.task.minPrice = transaction
       } else {
         // Если цена последней транзакции выросла
         // по сравнению с минимальной ценой, а так же все еще ниже часового минимума
         if (((1 - (this.task.minPrice / transaction)) * 1000) >= 2) {
           if (((1 - (this.task.minPrice / transaction)) * 1000) >= 10) {
+            console.log(`Высойкий курс ${transaction}, минимум ${this.task.minPrice}`)
             this.task.repeat--
             return false
           }
 
           // Цена ниже установленного минимума
           if (transaction <= this.task.price) {
+            console.log(`Цена ниже установленного минимума ${transaction}, минимум ${this.task.minPrice}`)
             // Повторно проверяем
             if (this.task.bottom !== 1) {
               this.task.bottom++
@@ -308,7 +313,6 @@ class Base {
             try {
               // Объем покупки
               const amount = parseFloat(this.task.amount).toFixed(8)
-
               console.log(`Выгодный курс ${transaction} для покупки ${this.task.amount} ${this.pair}`)
 
               // Отправляем заявку на покупку
@@ -485,8 +489,8 @@ class Base {
 
   	// Получаем объем для продажи
 	async getSellAmount() {
-		const wallets = await this.getWallets()
-		return wallets[this.purse]
+    const wallets = await this.getWallets()
+		return wallets[this.purseSell]
   }
   
   // Данные кошелька
@@ -514,14 +518,13 @@ class Base {
           })
         }
       }
-
       // Если всего 1 кошелек пустой, отдаем всю сумму
       if (distribution.length === 1) {
         // Доступно для использования
-        return parseFloat((wallets[this.purse] / rate).toFixed(8))
+        return parseFloat((wallets[this.purseBuy] / rate).toFixed(8))
       } else {
         // Разделяем на части
-        return parseFloat(((wallets[this.purse] / distribution.length) / rate).toFixed(8))
+        return parseFloat(((wallets[this.purseBuy] / distribution.length) / rate).toFixed(8))
       }
     } catch (e) {
       console.log('Error buyAmount', e.error)
@@ -531,7 +534,6 @@ class Base {
   async getHistory() {
     try {
       const history = await this.getHistoryApi()
-      console.log('history', history)
       const data = []
 
       for (let item in history) {
@@ -554,14 +556,8 @@ class Base {
   // Последняя транзакция
   lastTransaction() { }
 
-  // Получаем объем для продажи
-  getSellAmount() { }
-
   // Получаем данные кошелька
   getWallets() { }
-
-  // Получаем объем исходя из курса и суммы денег
-  buyAmount() { }
 
   // Метод для покупок/продажи
   trade() { }

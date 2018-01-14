@@ -81,8 +81,9 @@ const defaultParams = {
 const BinanceETHXRP = new Binance({
     ...defaultParams,
     api: 'binance',
-    pair: 'XRPETH',
-    purse: 'ETH',
+    pair: 'NEOETH',
+    purseBuy: 'ETH',
+    purseSell: 'NEO',
     percentWallet: percentWalletETHBinance
 })
 // const BinanceETHNEO = new Binance({

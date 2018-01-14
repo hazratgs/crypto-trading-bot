@@ -56,8 +56,9 @@ class Binance extends Base {
 	async lastTransaction() {
 		try {
 			// Последняя транзакция
-			const [order] = await this.query.allOrders({ symbol: this.pair, limit: 1 })
-				
+			const [lastTrade] = await this.query.myTrades({ symbol: this.pair, limit: 1 })
+			const order = await this.orderInfo(lastTrade.orderId)
+
 			// Добавляем методы для стандартизации разных бирж
 			return this.changeOrder(order)
 		} catch (e) {
@@ -138,7 +139,7 @@ class Binance extends Base {
 		
 		order.price = parseFloat(order.price)
 		order.amount = parseFloat(order.origQty)
-		order.type = order.side
+		order.type = order.side.toLowerCase()
 		order.start_amount = order.executedQty
 		order.timestamp = order.time
 
