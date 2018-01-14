@@ -12,7 +12,7 @@ const percentWalletUSDWex = ['btc', 'eth', 'ltc', 'dsh']
 const percentWalletBTCWex = ['eth', 'ltc', 'dsh']
 
 // Распределение бюджета Binance
-const percentWalletETHBinance = ['XRP', 'NEO', 'BCC', 'ETC']
+const percentWalletETHBinance = ['XRP', 'NEO', 'BCC']
 
 // Стандартные параметры бота
 const defaultParams = {

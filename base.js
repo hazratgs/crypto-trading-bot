@@ -188,7 +188,7 @@ class Base {
         this.task = {
           type: 'sell',
           buyAmount: lastTrade.price,
-          startAmount: lastTrade.amount,
+          startAmount: amount,
           price: minSellPrice,
           minPrice: minSellPrice, // минимальная достигнутая цена
           maxPrice: minSellPrice, // максимальная, на данный момент это цена закупки
