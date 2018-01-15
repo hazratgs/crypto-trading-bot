@@ -70,7 +70,7 @@ class Base {
     setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    setInterval(() => this.observe(), 10000)
+    setInterval(() => this.observe(), 60000)
 
     // Метод заполнения свечей, у каждой биржи своя реализация
     this.trades()
