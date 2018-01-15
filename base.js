@@ -196,6 +196,8 @@ class Base {
           currentPrice: minSellPrice,
           timestamp: Date.now()
         }
+
+        console.log('Создана задача', this.task)
         return false
       }
 

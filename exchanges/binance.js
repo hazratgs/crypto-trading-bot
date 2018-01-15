@@ -83,6 +83,16 @@ class Binance extends Base {
 
 	// Создание ордера
 	async trade(price, amount) {
+		console.log('trade', {
+			symbol: this.pair,
+			side: this.task.type,
+			type: 'limit',
+			price: price,
+			timeInForce: 'gtc',
+			quantity: amount,
+			timestamp: Date.now()
+		})
+		
 		return await this.query.newOrder({
 			symbol: this.pair,
 			side: this.task.type,

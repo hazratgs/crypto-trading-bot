@@ -19,7 +19,7 @@ const defaultParams = {
     api: null,
     pair: null,
     percentWallet: null,
-    commission: 0.2,
+    commission: 0.1,
     markup: 0.4,
     telegram: telegram
 }
