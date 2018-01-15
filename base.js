@@ -153,11 +153,11 @@ class Base {
     if (this.task !== null) return null
 
     try {
-      // if (!this.candles.length || this.candles.length < 120) {
-      //   console.log(`Недостаточно свеч ${this.candles.length} для пары ${this.pair}`)
-      //   return false
-      // }
-      console.log('запуск')
+      if (!this.candles.length || this.candles.length < 120) {
+        console.log(`Недостаточно свеч ${this.candles.length} для пары ${this.pair}`)
+        return false
+      }
+
       try {
         // Получение списка активных ордеров
         await this.activeOrders()
@@ -493,7 +493,7 @@ class Base {
   	// Получаем объем для продажи
 	async getSellAmount() {
     const wallets = await this.getWallets()
-		return wallets[this.purseSell]
+    return this.getCurrentAmount(wallets[this.purseSell])
   }
   
   // Данные кошелька
@@ -524,14 +524,20 @@ class Base {
       // Если всего 1 кошелек пустой, отдаем всю сумму
       if (distribution.length === 1) {
         // Доступно для использования
-        return parseFloat((wallets[this.purseBuy] / rate).toFixed(this.decimial))
+        return this.getCurrentAmount(parseFloat((wallets[this.purseBuy] / rate)))
       } else {
         // Разделяем на части
-        return parseFloat(((wallets[this.purseBuy] / distribution.length) / rate).toFixed(this.decimial))
+        return this.getCurrentAmount(parseFloat(((wallets[this.purseBuy] / distribution.length) / rate)))
       }
     } catch (e) {
       console.log('Error buyAmount', e.error)
     }
+  }
+
+  getCurrentAmount (amount) {
+    const [ceil] = amount.toString().split('.')
+    const [, remainder] = amount.toString().split('.')
+    return parseFloat([ceil, remainder.substr(0, this.decimial)].join('.'))
   }
 
   async getHistory() {
