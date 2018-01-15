@@ -21,7 +21,8 @@ const defaultParams = {
     percentWallet: null,
     commission: 0.1,
     markup: 0.4,
-    telegram: telegram
+    telegram: telegram,
+    decimial: 8
 }
 
 // Инициализация Wex ботов USD
@@ -84,7 +85,8 @@ const BinanceETHXRP = new Binance({
     pair: 'NEOETH',
     purseBuy: 'ETH',
     purseSell: 'NEO',
-    percentWallet: percentWalletETHBinance
+    percentWallet: percentWalletETHBinance,
+    decimial: 2
 })
 // const BinanceETHNEO = new Binance({
 //     ...defaultParams,

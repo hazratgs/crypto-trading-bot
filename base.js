@@ -2,7 +2,7 @@ const config = require('./conf')
 const moment = require('moment')
 
 class Base {
-  constructor({ api, pair, percentWallet, telegram, purseBuy, purseSell, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, purseBuy, purseSell, decimial, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
@@ -56,6 +56,9 @@ class Base {
 
     // Объект для доступа к API биржи
     this.query = null
+
+    // Количество нулей после запятой
+    this.decimial = decimial
   }
 
   // Инициализация
@@ -67,7 +70,7 @@ class Base {
     setInterval(() => this.observeOrders(), 1000)
 
     // Отслеживать каждую минуту ситуацию на рынке
-    setInterval(() => this.observe(), 60000)
+    setInterval(() => this.observe(), 10000)
 
     // Метод заполнения свечей, у каждой биржи своя реализация
     this.trades()
@@ -150,11 +153,11 @@ class Base {
     if (this.task !== null) return null
 
     try {
-      if (!this.candles.length || this.candles.length < 120) {
-        console.log(`Недостаточно свеч ${this.candles.length} для пары ${this.pair}`)
-        return false
-      }
-
+      // if (!this.candles.length || this.candles.length < 120) {
+      //   console.log(`Недостаточно свеч ${this.candles.length} для пары ${this.pair}`)
+      //   return false
+      // }
+      console.log('запуск')
       try {
         // Получение списка активных ордеров
         await this.activeOrders()
@@ -172,9 +175,9 @@ class Base {
 
       // Последняя транзакция
       const lastTrade = await this.lastTransaction()
-      
+
       // Ожидаем, что последняя транзакция, это продажа
-      if (lastTrade.type === 'buy' && this.task !== null) {
+      if (lastTrade.type === 'buy' && this.task === null) {
         // Восстанавливаем процесс продажи после остановки бота 
         console.log(`Восстановление продажу после сбоя ${this.pair}`, lastTrade)
 
@@ -314,11 +317,10 @@ class Base {
 
             try {
               // Объем покупки
-              const amount = parseFloat(this.task.amount).toFixed(8)
               console.log(`Выгодный курс ${transaction} для покупки ${this.task.amount} ${this.pair}`)
 
               // Отправляем заявку на покупку
-              await this.trade(transaction, amount)
+              await this.trade(transaction, this.task.amount)
 
               // Обнуляем задачу
               this.task = null
@@ -339,6 +341,7 @@ class Base {
 
       // Курс растет, ждем пика
       if (transaction > this.task.maxPrice) {
+        console.log('курс растет', transaction)
         this.task.maxPrice = transaction
       } else {
 
@@ -351,12 +354,10 @@ class Base {
           if (transaction >= this.task.price) {
             try {
               // Объем продажи
-              const amount = parseFloat(this.task.amount).toFixed(8)
-
-              console.log(`Отправляем заявку на продажу ${amount} по курсу ${transaction} ${this.pair}`)
+              console.log(`Отправляем заявку на продажу ${this.task.amount} по курсу ${transaction} ${this.pair}`)
 
               // Отправляем заявку на покупку
-              await this.trade(transaction, amount)
+              await this.trade(transaction, this.task.amount)
 
               // Обнуляем задачу
               this.task = null
@@ -523,10 +524,10 @@ class Base {
       // Если всего 1 кошелек пустой, отдаем всю сумму
       if (distribution.length === 1) {
         // Доступно для использования
-        return parseFloat((wallets[this.purseBuy] / rate).toFixed(8))
+        return parseFloat((wallets[this.purseBuy] / rate).toFixed(this.decimial))
       } else {
         // Разделяем на части
-        return parseFloat(((wallets[this.purseBuy] / distribution.length) / rate).toFixed(8))
+        return parseFloat(((wallets[this.purseBuy] / distribution.length) / rate).toFixed(this.decimial))
       }
     } catch (e) {
       console.log('Error buyAmount', e.error)
