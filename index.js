@@ -22,7 +22,8 @@ const defaultParams = {
     commission: 0.1,
     markup: 0.4,
     telegram: telegram,
-    decimial: 8
+    decimial: 8,
+    minPurse: 0.01
 }
 
 // Инициализация Wex ботов USD
@@ -82,26 +83,30 @@ const defaultParams = {
 const BinanceETHXRP = new Binance({
     ...defaultParams,
     api: 'binance',
+    pair: 'XRPETH',
+    purseBuy: 'ETH',
+    purseSell: 'XRP',
+    percentWallet: percentWalletETHBinance,
+    decimial: 0
+})
+const BinanceETHNEO = new Binance({
+    ...defaultParams,
+    api: 'binance',
     pair: 'NEOETH',
     purseBuy: 'ETH',
     purseSell: 'NEO',
     percentWallet: percentWalletETHBinance,
     decimial: 2
 })
-// const BinanceETHNEO = new Binance({
-//     ...defaultParams,
-//     api: 'binance',
-//     pair: 'NEOETH',
-//     purse: 'ETH',
-//     percentWallet: percentWalletETHBinance
-// })
-// const BinanceETHBCC = new Binance({
-//     ...defaultParams,
-//     api: 'binance',
-//     pair: 'BCCETH',
-//     purse: 'ETH',
-//     percentWallet: percentWalletETHBinance
-// })
+const BinanceETHZEC = new Binance({
+    ...defaultParams,
+    api: 'binance',
+    pair: 'ZECETH',
+    purseBuy: 'ETH',
+    purseSell: 'ZEC',
+    percentWallet: percentWalletETHBinance,
+    decimial: 3
+})
 // const BinanceETHETC = new Binance({
 //     ...defaultParams,
 //     api: 'binance',
@@ -123,6 +128,6 @@ const BinanceETHXRP = new Binance({
 
 // Старт Binance ботов
 BinanceETHXRP.init()
-// BinanceETHNEO.init()
-// BinanceETHBCC.init()
+BinanceETHNEO.init()
+BinanceETHZEC.init()
 // BinanceETHETC.init()

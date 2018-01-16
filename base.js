@@ -2,7 +2,7 @@ const config = require('./conf')
 const moment = require('moment')
 
 class Base {
-  constructor({ api, pair, percentWallet, telegram, purseBuy, purseSell, decimial, commission = 0.2, markup = 1 } = {}) {
+  constructor({ api, pair, percentWallet, telegram, purseBuy, purseSell, decimial, minPurse, commission = 0.2, markup = 1 } = {}) {
     // Доступы к API
     this.api = config.api[api]
 
@@ -59,6 +59,9 @@ class Base {
 
     // Количество нулей после запятой
     this.decimial = decimial
+
+    // Минимальное значение в кошельке для продажи
+    this.minPurse = minPurse
   }
 
   // Инициализация
@@ -255,8 +258,6 @@ class Base {
           bottom: 0, // если дно будет равно 1, то подтверждаем что это дно и покупаем
           timestamp: Date.now()
         }
-
-        console.log(`Достигнуто часовое дно для пары ${this.pair}`)
       }
     } catch (e) {
       console.log(`Error observe: ${e.error}`, e)
@@ -514,7 +515,7 @@ class Base {
 
       // Находим пустые кошельки
       for (let key in wallets) {
-        if (this.percentWallet.includes(key) && wallets[key] === 0) {
+        if (this.percentWallet.includes(key) && wallets[key] >= this.minPurse) {
           distribution.push({
             wallet: key,
             value: wallets[key]
@@ -527,16 +528,21 @@ class Base {
         return this.getCurrentAmount(parseFloat((wallets[this.purseBuy] / rate)))
       } else {
         // Разделяем на части
-        return this.getCurrentAmount(parseFloat(((wallets[this.purseBuy] / distribution.length) / rate)))
+        return this.getCurrentAmount(parseFloat((wallets[this.purseBuy] / distribution.length) / rate))
       }
     } catch (e) {
-      console.log('Error buyAmount', e.error)
+      console.log('Error buyAmount', e)
     }
   }
 
   getCurrentAmount (amount) {
     const [ceil] = amount.toString().split('.')
     const [, remainder] = amount.toString().split('.')
+    
+    // Возвращаем целое
+    if (this.decimial === 0) return ceil
+
+    // Возвращаем с остатком
     return parseFloat([ceil, remainder.substr(0, this.decimial)].join('.'))
   }
 
